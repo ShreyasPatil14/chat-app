@@ -12,5 +12,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class DirectChatRequest {
     @NotNull
-    private Long userId;
+    private Long userId; // the user you want to chat with
 }
