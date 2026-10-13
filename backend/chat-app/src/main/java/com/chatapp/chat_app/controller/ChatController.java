@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.controller;
 
 import com.chatapp.chat_app.dto.ChatResponse;
+import com.chatapp.chat_app.dto.CreateGroupRequest;
 import com.chatapp.chat_app.dto.DirectChatRequest;
 import com.chatapp.chat_app.model.User;
 import com.chatapp.chat_app.service.ChatService;
@@ -23,6 +24,11 @@ public class ChatController {
     @PostMapping("/direct")
     public ResponseEntity<ChatResponse> createDirectChat(@AuthenticationPrincipal User user, @Valid @RequestBody DirectChatRequest request) {
         return ResponseEntity.ok(chatService.getOrCreateDirectChat(user, request.getUserId()));
+    }
+
+    @PostMapping("/group")
+    public ResponseEntity<ChatResponse> createGroupChat(@AuthenticationPrincipal User user, @Valid @RequestBody CreateGroupRequest request){
+        return ResponseEntity.ok(chatService.createGroupChat(user, request));
     }
 
 }
