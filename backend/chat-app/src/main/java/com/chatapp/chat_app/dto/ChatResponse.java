@@ -13,5 +13,5 @@ import lombok.Setter;
 public class ChatResponse {
     private Long id;
     private ChatType type;
-    private String name; // other user's name
+    private String name; // other user's name or group name
 }
