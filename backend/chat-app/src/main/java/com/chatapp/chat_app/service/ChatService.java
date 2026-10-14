@@ -134,4 +134,33 @@ public class ChatService {
 
         return result;
     }
+
+    // add a member in group chat:
+    @Transactional
+    public void addMember(User currentUser, Long chatId, Long userId) {
+        Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new IllegalArgumentException("Chat not found"));
+
+        if(chat.getType().equals(ChatType.DIRECT)) {
+            throw new IllegalArgumentException("Members can only be added to group chats");
+        }
+
+        Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUser.getId());
+        if(member.isEmpty()) {
+            throw new IllegalArgumentException("You are not a member of this chat");
+        }
+        else if(!member.get().getRole().equals(MemberRole.ADMIN)) {
+            throw new IllegalArgumentException("Only admins can add members");
+        }
+
+        if(chatMemberRepository.existsByChatIdAndUserId(chatId, userId)) {
+            throw new IllegalArgumentException("User is already a member");
+        }
+
+        User newMember = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        ChatMember memberToAdd = new ChatMember();
+        memberToAdd.setChat(chat);
+        memberToAdd.setUser(newMember);
+        memberToAdd.setRole(MemberRole.MEMBER);
+        chatMemberRepository.save(memberToAdd);
+    }
 }
