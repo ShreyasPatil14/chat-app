@@ -1,19 +1,13 @@
 package com.chatapp.chat_app.controller;
 
-import com.chatapp.chat_app.dto.ChatResponse;
-import com.chatapp.chat_app.dto.ChatSummaryResponse;
-import com.chatapp.chat_app.dto.CreateGroupRequest;
-import com.chatapp.chat_app.dto.DirectChatRequest;
+import com.chatapp.chat_app.dto.*;
 import com.chatapp.chat_app.model.User;
 import com.chatapp.chat_app.service.ChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -39,4 +33,9 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getMyChats(user));
     }
 
+    @PostMapping("/{id}/members")
+    public ResponseEntity<Void> addMember(@AuthenticationPrincipal User user, @PathVariable Long id, @Valid @RequestBody AddMemberRequest request) {
+        chatService.addMember(user, id, request.getUserId());
+        return ResponseEntity.ok().build();
+    }
 }
