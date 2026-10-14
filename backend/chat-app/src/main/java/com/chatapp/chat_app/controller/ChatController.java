@@ -38,4 +38,10 @@ public class ChatController {
         chatService.addMember(user, id, request.getUserId());
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{chatId}/members/{userId}")
+    public ResponseEntity<Void> removeMember(@AuthenticationPrincipal User user, @PathVariable Long chatId, @PathVariable Long userId){
+        chatService.removeMember(user, chatId, userId);
+        return ResponseEntity.ok().build();
+    }
 }
