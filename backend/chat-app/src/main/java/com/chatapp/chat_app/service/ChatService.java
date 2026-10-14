@@ -140,19 +140,18 @@ public class ChatService {
     public void addMember(User currentUser, Long chatId, Long userId) {
         Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new IllegalArgumentException("Chat not found"));
 
-        if(chat.getType().equals(ChatType.DIRECT)) {
+        if (chat.getType().equals(ChatType.DIRECT)) {
             throw new IllegalArgumentException("Members can only be added to group chats");
         }
 
         Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUser.getId());
-        if(member.isEmpty()) {
+        if (member.isEmpty()) {
             throw new IllegalArgumentException("You are not a member of this chat");
-        }
-        else if(!member.get().getRole().equals(MemberRole.ADMIN)) {
+        } else if (!member.get().getRole().equals(MemberRole.ADMIN)) {
             throw new IllegalArgumentException("Only admins can add members");
         }
 
-        if(chatMemberRepository.existsByChatIdAndUserId(chatId, userId)) {
+        if (chatMemberRepository.existsByChatIdAndUserId(chatId, userId)) {
             throw new IllegalArgumentException("User is already a member");
         }
 
@@ -162,5 +161,47 @@ public class ChatService {
         memberToAdd.setUser(newMember);
         memberToAdd.setRole(MemberRole.MEMBER);
         chatMemberRepository.save(memberToAdd);
+    }
+
+    // remove member:
+    @Transactional
+    public void removeMember(User currentUser, Long chatId, Long userId) {
+        Chat chat = chatRepository.findById(chatId).orElseThrow(() -> new IllegalArgumentException("Chat not found"));
+        if (chat.getType().equals(ChatType.DIRECT)) {
+            throw new IllegalArgumentException("Members can only be removed from group chats");
+        }
+
+        Optional<ChatMember> caller = chatMemberRepository.findByChatIdAndUserId(chatId, currentUser.getId());
+        if (caller.isEmpty()) {
+            throw new IllegalArgumentException("You are not a member of this chat");
+        }
+
+        Optional<ChatMember> target = chatMemberRepository.findByChatIdAndUserId(chatId, userId);
+        if (target.isEmpty()) {
+            throw new IllegalArgumentException("User is not a member of this chat");
+        }
+
+        if (!currentUser.getId().equals(userId) && !caller.get().getRole().equals(MemberRole.ADMIN)) {
+            throw new IllegalArgumentException("Only admins can remove members");
+        }
+
+        if (target.get().getRole() == MemberRole.ADMIN) {
+            List<ChatMember> others = chatMemberRepository.findByChatId(chatId).stream()
+                    .filter(m -> !m.getId().equals(target.get().getId()))
+                    .toList();
+
+            boolean anotherAdminExists = others.stream()
+                    .anyMatch(m -> m.getRole() == MemberRole.ADMIN);
+
+            if (!others.isEmpty() && !anotherAdminExists) {
+                ChatMember newAdmin = others.stream()
+                        .min(Comparator.comparing(ChatMember::getJoinedAt))
+                        .get();
+                newAdmin.setRole(MemberRole.ADMIN);
+                chatMemberRepository.save(newAdmin);
+            }
+        }
+
+        chatMemberRepository.delete(target.get());
     }
 }
