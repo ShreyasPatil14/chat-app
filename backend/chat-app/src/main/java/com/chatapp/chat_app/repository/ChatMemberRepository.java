@@ -20,7 +20,9 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
     Optional<Chat> findDirectChat(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
 
     List<ChatMember> findByUserId(Long userId);
-
     List<ChatMember> findByChatId(Long chatId);
+
+    Optional<ChatMember> findByChatIdAndUserId(Long chatId, Long userId);
+    boolean existsByChatIdAndUserId(Long chatId, Long userId);
 }
 
