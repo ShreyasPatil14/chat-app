@@ -1,19 +1,18 @@
 package com.chatapp.chat_app.service;
 
 import com.chatapp.chat_app.dto.ChatResponse;
+import com.chatapp.chat_app.dto.ChatSummaryResponse;
 import com.chatapp.chat_app.dto.CreateGroupRequest;
-import com.chatapp.chat_app.model.Chat;
-import com.chatapp.chat_app.model.ChatMember;
-import com.chatapp.chat_app.model.MemberRole;
-import com.chatapp.chat_app.model.User;
+import com.chatapp.chat_app.model.*;
 import com.chatapp.chat_app.repository.ChatMemberRepository;
 import com.chatapp.chat_app.repository.ChatRepository;
+import com.chatapp.chat_app.repository.MessageRepository;
 import com.chatapp.chat_app.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import com.chatapp.chat_app.model.ChatType;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -22,19 +21,20 @@ public class ChatService {
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
     private final ChatMemberRepository chatMemberRepository;
+    private final MessageRepository messageRepository;
 
     // create or get direct chat:
     @Transactional
-    public ChatResponse getOrCreateDirectChat(User currentUser, Long otherUserId){
-        if(currentUser.getId().equals(otherUserId)){
+    public ChatResponse getOrCreateDirectChat(User currentUser, Long otherUserId) {
+        if (currentUser.getId().equals(otherUserId)) {
             throw new IllegalArgumentException("Cannot chat with yourself");
         }
 
-        User otherUser = userRepository.findById(otherUserId).orElseThrow(()-> new IllegalArgumentException("User not found"));
+        User otherUser = userRepository.findById(otherUserId).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         Optional<Chat> chat = chatMemberRepository.findDirectChat(currentUser.getId(), otherUserId);
 
-        if(chat.isPresent()){
+        if (chat.isPresent()) {
             return new ChatResponse(chat.get().getId(), chat.get().getType(), otherUser.getUsername());
         }
 
@@ -60,7 +60,7 @@ public class ChatService {
 
     // create group chat:
     @Transactional
-    public ChatResponse createGroupChat(User currentUser, CreateGroupRequest request){
+    public ChatResponse createGroupChat(User currentUser, CreateGroupRequest request) {
         Set<Long> ids = new HashSet<>(request.getMemberIds());
         ids.remove(currentUser.getId());
 
@@ -69,7 +69,7 @@ public class ChatService {
         }
 
         List<User> users = userRepository.findAllById(ids);
-        if(users.size() != ids.size()){
+        if (users.size() != ids.size()) {
             throw new IllegalArgumentException("One or more users not found!");
         }
 
@@ -90,7 +90,7 @@ public class ChatService {
         members.add(admin);
 
         // other members:
-        for(User user : users){
+        for (User user : users) {
             ChatMember member = new ChatMember();
             member.setChat(newChat);
             member.setUser(user);
@@ -102,5 +102,36 @@ public class ChatService {
         chatMemberRepository.saveAll(members);
 
         return new ChatResponse(newChat.getId(), newChat.getType(), newChat.getName());
+    }
+
+    // get all chats for a user:
+    @Transactional(readOnly = true)
+    public List<ChatSummaryResponse> getMyChats(User currentUser) {
+        List<ChatMember> memberships = chatMemberRepository.findByUserId(currentUser.getId());
+        List<ChatSummaryResponse> result = new ArrayList<>();
+
+        for (ChatMember membership : memberships) {
+            Chat chat = membership.getChat();
+
+            String name;
+            if (chat.getType() == ChatType.GROUP) {
+                name = chat.getName();
+            } else {
+                name = chatMemberRepository.findByChatId(chat.getId()).stream()
+                        .map(ChatMember::getUser)
+                        .filter(u -> !u.getId().equals(currentUser.getId()))
+                        .map(User::getUsername)
+                        .findFirst()
+                        .orElse("Unknown");
+            }
+
+            Optional<Message> last = messageRepository.findFirstByChatIdOrderByIdDesc(chat.getId());
+            String lastMessage = last.map(Message::getContent).orElse(null);
+            LocalDateTime lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
+
+            result.add(new ChatSummaryResponse(chat.getId(), chat.getType(), name, lastMessage, lastMessageAt));
+        }
+
+        return result;
     }
 }
