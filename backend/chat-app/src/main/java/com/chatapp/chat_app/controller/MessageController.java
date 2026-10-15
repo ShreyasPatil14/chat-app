@@ -12,11 +12,10 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/chats")
 public class MessageController {
     private final MessageService messageService;
 
-    @GetMapping("/{chatId}/messages")
+    @GetMapping("/api/chats/{chatId}/messages")
     public ResponseEntity<List<MessageResponse>> getMessages(
             @AuthenticationPrincipal User user,
             @PathVariable Long chatId,
@@ -24,5 +23,10 @@ public class MessageController {
             @RequestParam(defaultValue = "30") int limit
     ) {
         return ResponseEntity.ok(messageService.getMessages(user, chatId, before, limit));
+    }
+
+    @GetMapping("/api/messages/sync")
+    public ResponseEntity<List<MessageResponse>> syncMessages(@AuthenticationPrincipal User user){
+        return ResponseEntity.ok(messageService.syncMessages(user));
     }
 }
