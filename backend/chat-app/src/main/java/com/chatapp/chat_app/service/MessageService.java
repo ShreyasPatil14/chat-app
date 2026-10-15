@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.service;
 
 import com.chatapp.chat_app.dto.MessageResponse;
+import com.chatapp.chat_app.model.ChatMember;
 import com.chatapp.chat_app.model.Message;
 import com.chatapp.chat_app.model.User;
 import com.chatapp.chat_app.repository.ChatMemberRepository;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,6 +21,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ChatMemberRepository chatMemberRepository;
 
+    // get messages for chat:
     @Transactional(readOnly = true)
     public List<MessageResponse> getMessages(User currentUser, Long chatId, Long before, int limit) {
         if (!chatMemberRepository.existsByChatIdAndUserId(chatId, currentUser.getId())) {
@@ -43,5 +46,35 @@ public class MessageService {
                         m.getContent(),
                         m.getCreatedAt()))
                 .toList();
+    }
+
+    // get new messages (undelivered) for a user:
+    @Transactional(readOnly = true)
+    public List<MessageResponse> syncMessages(User user) {
+        List<ChatMember> memberships = chatMemberRepository.findByUserId(user.getId());
+
+        List<MessageResponse> result = new ArrayList<>();
+
+        for (ChatMember membership : memberships) {
+            Long chatId = membership.getChat().getId();
+            Long afterId = membership.getLastDeliveredMessageId() != null
+                    ? membership.getLastDeliveredMessageId()
+                    : 0L;
+
+            List<Message> missed = messageRepository
+                    .findByChatIdAndIdGreaterThanOrderByIdAsc(chatId, afterId, PageRequest.of(0, 200));
+
+            for (Message m : missed) {
+                result.add(new MessageResponse(
+                        m.getId(),
+                        m.getChat().getId(),
+                        m.getSender().getId(),
+                        m.getSender().getUsername(),
+                        m.getContent(),
+                        m.getCreatedAt()));
+            }
+        }
+
+        return result;
     }
 }
