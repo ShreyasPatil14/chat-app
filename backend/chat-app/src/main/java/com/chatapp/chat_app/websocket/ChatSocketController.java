@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.websocket;
 
 import com.chatapp.chat_app.dto.MessageResponse;
+import com.chatapp.chat_app.dto.ReceiptRequest;
 import com.chatapp.chat_app.dto.SendMessageRequest;
 import com.chatapp.chat_app.model.ChatMember;
 import com.chatapp.chat_app.model.User;
@@ -26,13 +27,14 @@ public class ChatSocketController {
     private final ChatMemberRepository chatMemberRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private User getUser(Principal principal) {
+        return userRepository.findById(Long.valueOf(principal.getName()))
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload @Valid SendMessageRequest request, Principal principal) {
-        Long senderId = Long.valueOf(principal.getName());
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        MessageResponse response = messageService.saveMessage(sender, request);
+        MessageResponse response = messageService.saveMessage(getUser(principal), request);
 
         List<ChatMember> members = chatMemberRepository.findByChatId(request.getChatId());
         for (ChatMember member : members) {
@@ -41,5 +43,15 @@ public class ChatSocketController {
                     "/queue/messages",
                     response);
         }
+    }
+
+    @MessageMapping("/chat.delivered")
+    public void delivered(@Payload @Valid ReceiptRequest request, Principal principal) {
+        messageService.markDelivered(getUser(principal), request);
+    }
+
+    @MessageMapping("/chat.read")
+    public void read(@Payload @Valid ReceiptRequest request, Principal principal) {
+        messageService.markRead(getUser(principal), request);
     }
 }
