@@ -1,6 +1,7 @@
 package com.chatapp.chat_app.service;
 
 import com.chatapp.chat_app.dto.MessageResponse;
+import com.chatapp.chat_app.dto.ReceiptRequest;
 import com.chatapp.chat_app.dto.SendMessageRequest;
 import com.chatapp.chat_app.model.Chat;
 import com.chatapp.chat_app.model.ChatMember;
@@ -111,5 +112,39 @@ public class MessageService {
                 response.getContent(),
                 response.getCreatedAt()
         );
+    }
+
+    // mark message delivered:
+    @Transactional
+    public void markDelivered(User user, ReceiptRequest request){
+        Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(request.getChatId(), user.getId());
+        if(member.isEmpty()){
+            throw new IllegalArgumentException("You are not a member of this chat");
+        }
+
+        ChatMember m = member.get();
+        if(m.getLastDeliveredMessageId() == null || m.getLastDeliveredMessageId() < request.getMessageId()){
+            m.setLastDeliveredMessageId(request.getMessageId());
+        }
+        chatMemberRepository.save(m);
+    }
+
+    // mark message read:
+    @Transactional
+    public void markRead(User user, ReceiptRequest request){
+        Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(request.getChatId(), user.getId());
+        if(member.isEmpty()){
+            throw new IllegalArgumentException("You are not a member of this chat");
+        }
+
+        ChatMember m = member.get();
+        if(m.getLastReadMessageId() == null || m.getLastReadMessageId() < request.getMessageId()){
+            m.setLastReadMessageId(request.getMessageId());
+        }
+
+        if (m.getLastDeliveredMessageId() == null || m.getLastDeliveredMessageId() < request.getMessageId()) {
+            m.setLastDeliveredMessageId(request.getMessageId());
+        }
+        chatMemberRepository.save(m);
     }
 }
