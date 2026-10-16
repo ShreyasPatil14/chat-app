@@ -24,5 +24,12 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
 
     Optional<ChatMember> findByChatIdAndUserId(Long chatId, Long userId);
     boolean existsByChatIdAndUserId(Long chatId, Long userId);
+
+    @Query("""
+    SELECT DISTINCT cm2.user.id FROM ChatMember cm1
+    JOIN ChatMember cm2 ON cm1.chat = cm2.chat
+    WHERE cm1.user.id = :userId AND cm2.user.id <> :userId
+""")
+    List<Long> findContactIds(@Param("userId") Long userId);
 }
 
