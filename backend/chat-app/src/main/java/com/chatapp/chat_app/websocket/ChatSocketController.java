@@ -8,6 +8,8 @@ import com.chatapp.chat_app.model.User;
 import com.chatapp.chat_app.repository.ChatMemberRepository;
 import com.chatapp.chat_app.repository.UserRepository;
 import com.chatapp.chat_app.service.MessageService;
+import com.chatapp.chat_app.service.PresenceService;
+import com.chatapp.chat_app.service.PushNotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -26,6 +28,8 @@ public class ChatSocketController {
     private final MessageService messageService;
     private final ChatMemberRepository chatMemberRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final PresenceService presenceService;
+    private final PushNotificationService pushNotificationService;
 
     private User getUser(Principal principal) {
         return userRepository.findById(Long.valueOf(principal.getName()))
@@ -38,10 +42,20 @@ public class ChatSocketController {
 
         List<ChatMember> members = chatMemberRepository.findByChatId(request.getChatId());
         for (ChatMember member : members) {
+            Long memberId = member.getUser().getId();
+
             messagingTemplate.convertAndSendToUser(
-                    member.getUser().getId().toString(),
+                    memberId.toString(),
                     "/queue/messages",
                     response);
+            if (!memberId.equals(response.getSenderId()) && !presenceService.isOnline(memberId)) {
+                pushNotificationService.sendMessagePush(
+                        memberId,
+                        response.getSenderUsername(),
+                        response.getContent(),
+                        response.getChatId(),
+                        response.getId());
+            }
         }
     }
 
