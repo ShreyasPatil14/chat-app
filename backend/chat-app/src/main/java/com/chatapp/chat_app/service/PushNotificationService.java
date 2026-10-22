@@ -45,11 +45,16 @@ public class PushNotificationService {
 
         try {
             BatchResponse batch = firebaseMessaging.sendEachForMulticast(message);
+            log.info("FCM push for user {}: {} sent, {} failed",
+                    userId, batch.getSuccessCount(), batch.getFailureCount());
 
             // remove tokens that Firebase says are no longer valid:
             List<SendResponse> responses = batch.getResponses();
             List<DeviceToken> invalid = new ArrayList<>();
             for (int i = 0; i < responses.size(); i++) {
+                if (!responses.get(i).isSuccessful()) {
+                    log.warn("FCM failed for user {}: {}", userId, responses.get(i).getException().getMessagingErrorCode());
+                }
                 SendResponse response = responses.get(i);
                 if (!response.isSuccessful()
                         && response.getException().getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
