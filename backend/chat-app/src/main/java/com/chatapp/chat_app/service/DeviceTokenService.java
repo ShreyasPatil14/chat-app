@@ -26,4 +26,10 @@ public class DeviceTokenService {
         deviceToken.setFcmToken(token);
         deviceTokenRepository.save(deviceToken);
     }
+
+    // remove a device token of a user (on logout):
+    @Transactional
+    public void unregister(User user, RegisterDeviceTokenRequest request) {
+        deviceTokenRepository.deleteByFcmTokenAndUserId(request.getFcmToken().trim(), user.getId());
+    }
 }
