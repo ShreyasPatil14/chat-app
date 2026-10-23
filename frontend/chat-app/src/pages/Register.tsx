@@ -64,7 +64,7 @@ export default function Register() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-100"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-100 cursor-pointer"
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
@@ -84,7 +84,7 @@ export default function Register() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
         >
           {loading ? 'Creating account...' : 'Register'}
         </button>
