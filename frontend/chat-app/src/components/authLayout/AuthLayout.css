@@ -1,0 +1,25 @@
+.bg {
+  background: linear-gradient(120deg, rgb(183, 0, 180), rgb(0, 0, 82));
+}
+
+.card-bg {
+  background: rgba(0, 0, 0, 0.249);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0px 0px 10px rgba(181, 181, 255, 0.9);
+  /* box-shadow: 0px 0px 10px rgba(181, 181, 255, 0.9); */
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, white, rgb(0, 94, 255),rgb(0, 94, 255), rgb(0, 94, 255),rgb(0, 0, 0), rgb(0, 0, 0), rgb(0, 94, 255), rgb(0, 94, 255),rgb(0, 94, 255), white);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-animation 10s ease infinite;
+}
+
+@keyframes gradient-animation {
+  0%      { background-position: 100% 100%; }
+  28.57%  { background-position: 0% 0%; }   /* 2s of 7s: movement ends here */
+  100%    { background-position: 0% 0%; }   /* holds for the remaining 5s */
+}
