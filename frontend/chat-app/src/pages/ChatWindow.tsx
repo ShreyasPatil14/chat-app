@@ -5,7 +5,7 @@ import { getMessages } from '../api/messages'
 import { getErrorMessage } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 import { formatChatTime, formatMessageTime } from '../utils/chat'
-import type { ChatSummary } from '../types/chat'
+import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
 
@@ -20,6 +20,30 @@ export default function ChatWindow() {
     const { client, connected } = useSocket()
     const [text, setText] = useState('')
     const bottomRef = useRef<HTMLDivElement>(null)
+    const lastReadSent = useRef(0)
+    const [visible, setVisible] = useState(document.visibilityState === 'visible')
+    const otherUserId = chat?.otherUserId
+    const [online, setOnline] = useState(chat?.online ?? false)
+    const [lastSeen, setLastSeen] = useState(chat?.lastSeen ?? null)
+
+    useEffect(() => {
+        const onChange = () => setVisible(document.visibilityState === 'visible')
+        document.addEventListener('visibilitychange', onChange)
+        return () => document.removeEventListener('visibilitychange', onChange)
+    }, [])
+
+    useEffect(() => {
+        if (!client || !connected || !visible || messages.length === 0) return
+
+        const latestId = messages[messages.length - 1].id
+        if (latestId <= lastReadSent.current) return
+
+        lastReadSent.current = latestId
+        client.publish({
+            destination: '/app/chat.read',
+            body: JSON.stringify({ chatId: Number(chatId), messageId: latestId }),
+        })
+    }, [client, connected, visible, messages, chatId])
 
     useEffect(() => {
         getMessages(Number(chatId))
@@ -44,6 +68,19 @@ export default function ChatWindow() {
         return () => sub.unsubscribe()
     }, [client, connected, chatId])
 
+    useEffect(() => {
+        if (!client || !connected || !otherUserId) return
+
+        const sub = client.subscribe('/user/queue/presence', (frame) => {
+            const p: PresenceUpdate = JSON.parse(frame.body)
+            if (p.userId !== otherUserId) return
+            setOnline(p.online)
+            setLastSeen(p.lastSeen)
+        })
+
+        return () => sub.unsubscribe()
+    }, [client, connected, otherUserId])
+
     const handleSend = (e: SyntheticEvent) => {
         e.preventDefault()
         const content = text.trim()
@@ -61,8 +98,8 @@ export default function ChatWindow() {
 
     let status = ''
     if (chat?.type === 'DIRECT') {
-        if (chat.online) status = 'online'
-        else if (chat.lastSeen) status = `last seen ${formatChatTime(chat.lastSeen)}`
+        if (online) status = 'online'
+        else if (lastSeen) status = `last seen ${formatChatTime(lastSeen)}`
     }
 
     return (
