@@ -10,16 +10,16 @@
 }
 
 .gradient-text {
-  background: linear-gradient(120deg, white, rgb(0, 94, 255),rgb(0, 94, 255), rgb(0, 94, 255),rgb(0, 0, 0), rgb(0, 0, 0), rgb(0, 94, 255), rgb(0, 94, 255),rgb(0, 94, 255), white);
+  background: linear-gradient(120deg,rgb(0, 56, 154), rgb(20, 106, 255),rgb(0, 0, 0), rgb(0, 0, 0));
   background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: gradient-animation 10s ease infinite;
+  animation: gradient-animation 10s ease-in;
 }
 
 @keyframes gradient-animation {
   0%      { background-position: 100% 100%; }
-  28.57%  { background-position: 0% 0%; }   /* 2s of 7s: movement ends here */
+  35%  { background-position: 0% 0%; }   /* 2s of 7s: movement ends here */
   100%    { background-position: 0% 0%; }   /* holds for the remaining 5s */
 }
