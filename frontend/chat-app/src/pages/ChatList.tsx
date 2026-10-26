@@ -1,15 +1,23 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import ChatListItem from '../components/ChatListItem'
 import { getMyChats } from '../api/chats'
 import { getErrorMessage } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
-import type { ChatSummary } from '../types/chat'
+import type { ChatSummary, PresenceUpdate } from '../types/chat'
+import { useSocket } from '../hooks/useSocket'
+import type { Message } from '../types/message'
 
 export default function ChatList() {
   const [chats, setChats] = useState<ChatSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const { logout } = useAuth()
+  const { client, connected } = useSocket()
+  const chatsRef = useRef<ChatSummary[]>([])
+
+  useEffect(() => {
+    chatsRef.current = chats
+  }, [chats])
 
   useEffect(() => {
     getMyChats()
@@ -17,6 +25,41 @@ export default function ChatList() {
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (!client || !connected) return
+
+    const messageSub = client.subscribe('/user/queue/messages', (frame) => {
+      const msg: Message = JSON.parse(frame.body)
+
+      if (!chatsRef.current.some((c) => c.id === msg.chatId)) {
+        getMyChats().then(setChats)
+        return
+      }
+
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === msg.chatId
+            ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+            : c,
+        ),
+      )
+    })
+
+    const presenceSub = client.subscribe('/user/queue/presence', (frame) => {
+      const p: PresenceUpdate = JSON.parse(frame.body)
+      setChats((prev) =>
+        prev.map((c) =>
+          c.otherUserId === p.userId ? { ...c, online: p.online, lastSeen: p.lastSeen } : c,
+        ),
+      )
+    })
+
+    return () => {
+      messageSub.unsubscribe()
+      presenceSub.unsubscribe()
+    }
+  }, [client, connected])
 
   const sorted = [...chats].sort(
     (a, b) =>
