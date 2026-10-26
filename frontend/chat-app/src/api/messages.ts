@@ -1,7 +1,13 @@
-import { api } from './axios'
-import type { Message } from '../types/message'
+import { api } from "./axios";
+import type { Message } from "../types/message";
 
 export const getMessages = (chatId: number, before?: number, limit = 30) =>
   api
-    .get<Message[]>(`/api/chats/${chatId}/messages`, { params: { before, limit } })
-    .then((res) => res.data)
+    .get<
+      Message[]
+    >(`/api/chats/${chatId}/messages`, { params: { before, limit } })
+    .then((res) => res.data);
+
+export const syncMessages = () =>
+  api.get<Message[]>("/api/messages/sync").then((res) => res.data);
+
