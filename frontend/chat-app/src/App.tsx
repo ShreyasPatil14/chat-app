@@ -4,9 +4,11 @@ import Register from './pages/Register'
 import { useAuth } from './hooks/useAuth'
 import ChatList from './pages/ChatList'
 import ChatWindow from './pages/ChatWindow'
+import { useDeliveryReceipts } from './hooks/useDeliveryReceipts'
 
 export default function App() {
   const { token } = useAuth()
+  useDeliveryReceipts()
 
   return (
     <Routes>
