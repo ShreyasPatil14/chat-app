@@ -21,4 +21,5 @@ public class ChatSummaryResponse {
     private LocalDateTime lastSeen;
     private String lastMessage;
     private LocalDateTime lastMessageAt;
+    private long unreadCount;
 }
