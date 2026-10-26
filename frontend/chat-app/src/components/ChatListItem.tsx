@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function ChatListItem({ chat }: { chat: ChatSummary }) {
   const showOnline = chat.type === 'DIRECT' && chat.online
+  const unread = chat.unreadCount > 0
   const navigate = useNavigate()
 
   return (
@@ -15,10 +16,21 @@ export default function ChatListItem({ chat }: { chat: ChatSummary }) {
       <Avatar name={chat.name} online={showOnline} />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="font-medium truncate">{chat.name}</p>
-          <span className="text-xs text-gray-500 shrink-0">{formatChatTime(chat.lastMessageAt)}</span>
+          <p className={`truncate ${unread ? 'font-bold' : 'font-medium'}`}>{chat.name}</p>
+          <span className={`text-xs shrink-0 ${unread ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+            {formatChatTime(chat.lastMessageAt)}
+          </span>
         </div>
-        <p className="text-sm text-gray-500 truncate">{chat.lastMessage ?? 'No messages yet'}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
+            {chat.lastMessage ?? 'No messages yet'}
+          </p>
+          {unread && (
+            <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center">
+              {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   )
