@@ -28,7 +28,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.createGroupChat(user, request));
     }
 
-    @PostMapping
+    @GetMapping
     public ResponseEntity<List<ChatSummaryResponse>> getMyChats(@AuthenticationPrincipal User user){
         return ResponseEntity.ok(chatService.getMyChats(user));
     }
