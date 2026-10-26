@@ -22,6 +22,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final ChatMemberRepository chatMemberRepository;
     private final MessageRepository messageRepository;
+    private final PresenceService presenceService;
 
     // create or get direct chat:
     @Transactional
@@ -104,7 +105,7 @@ public class ChatService {
         return new ChatResponse(newChat.getId(), newChat.getType(), newChat.getName());
     }
 
-    // get all chats for a user:
+    // get all chats for a user with online/offline status for direct chats:
     @Transactional(readOnly = true)
     public List<ChatSummaryResponse> getMyChats(User currentUser) {
         List<ChatMember> memberships = chatMemberRepository.findByUserId(currentUser.getId());
@@ -114,22 +115,35 @@ public class ChatService {
             Chat chat = membership.getChat();
 
             String name;
+            Long otherUserId = null;
+            boolean online = false;
+            LocalDateTime lastSeen = null;
+
             if (chat.getType() == ChatType.GROUP) {
                 name = chat.getName();
             } else {
-                name = chatMemberRepository.findByChatId(chat.getId()).stream()
+                User other = chatMemberRepository.findByChatId(chat.getId()).stream()
                         .map(ChatMember::getUser)
                         .filter(u -> !u.getId().equals(currentUser.getId()))
-                        .map(User::getUsername)
                         .findFirst()
-                        .orElse("Unknown");
+                        .orElse(null);
+
+                if (other == null) {
+                    name = "Unknown";
+                } else {
+                    name = other.getUsername();
+                    otherUserId = other.getId();
+                    online = presenceService.isOnline(other.getId());
+                    lastSeen = other.getLastSeen();
+                }
             }
 
             Optional<Message> last = messageRepository.findFirstByChatIdOrderByIdDesc(chat.getId());
             String lastMessage = last.map(Message::getContent).orElse(null);
             LocalDateTime lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
 
-            result.add(new ChatSummaryResponse(chat.getId(), chat.getType(), name, lastMessage, lastMessageAt));
+            result.add(new ChatSummaryResponse(
+                    chat.getId(), chat.getType(), name, otherUserId, online, lastSeen, lastMessage, lastMessageAt));
         }
 
         return result;
