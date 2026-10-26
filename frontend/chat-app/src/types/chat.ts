@@ -15,6 +15,7 @@ export interface ChatSummary {
   otherUserId: number | null
   online: boolean
   lastSeen: string | null
+  unreadCount: number
 }
 
 export interface PresenceUpdate {
