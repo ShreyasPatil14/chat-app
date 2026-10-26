@@ -11,9 +11,9 @@ export default function ChatList() {
   const [chats, setChats] = useState<ChatSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const { logout } = useAuth()
   const { client, connected } = useSocket()
   const chatsRef = useRef<ChatSummary[]>([])
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     chatsRef.current = chats
@@ -40,7 +40,12 @@ export default function ChatList() {
       setChats((prev) =>
         prev.map((c) =>
           c.id === msg.chatId
-            ? { ...c, lastMessage: msg.content, lastMessageAt: msg.createdAt }
+            ? {
+              ...c,
+              lastMessage: msg.content,
+              lastMessageAt: msg.createdAt,
+              unreadCount: msg.senderId === user?.userId ? c.unreadCount : c.unreadCount + 1,
+            }
             : c,
         ),
       )
@@ -59,7 +64,7 @@ export default function ChatList() {
       messageSub.unsubscribe()
       presenceSub.unsubscribe()
     }
-  }, [client, connected])
+  }, [client, connected, user?.userId])
 
   const sorted = [...chats].sort(
     (a, b) =>
