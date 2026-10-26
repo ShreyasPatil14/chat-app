@@ -16,6 +16,9 @@ public class ChatSummaryResponse {
     private Long id;
     private ChatType type;
     private String name;
+    private Long otherUserId;
+    private boolean online;
+    private LocalDateTime lastSeen;
     private String lastMessage;
     private LocalDateTime lastMessageAt;
 }
