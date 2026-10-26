@@ -16,3 +16,10 @@ export interface ChatSummary {
   online: boolean
   lastSeen: string | null
 }
+
+export interface PresenceUpdate {
+  userId: number
+  online: boolean
+  lastSeen: string | null
+}
+
