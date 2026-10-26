@@ -32,3 +32,7 @@ export function formatChatTime(iso: string | null): string {
   if (date >= startOfYesterday) return 'Yesterday'
   return date.toLocaleDateString()
 }
+
+export function formatMessageTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
