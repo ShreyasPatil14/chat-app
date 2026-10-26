@@ -142,8 +142,12 @@ public class ChatService {
             String lastMessage = last.map(Message::getContent).orElse(null);
             LocalDateTime lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
 
+            Long lastRead = membership.getLastReadMessageId() != null ? membership.getLastReadMessageId() : 0L;
+            long unreadCount = messageRepository.countByChatIdAndIdGreaterThanAndSenderIdNot(
+                    chat.getId(), lastRead, currentUser.getId());
+
             result.add(new ChatSummaryResponse(
-                    chat.getId(), chat.getType(), name, otherUserId, online, lastSeen, lastMessage, lastMessageAt));
+                    chat.getId(), chat.getType(), name, otherUserId, online, lastSeen, lastMessage, lastMessageAt, unreadCount));
         }
 
         return result;
