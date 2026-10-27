@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { data, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Avatar from '../components/Avatar'
-import { getMessages } from '../api/messages'
 import { getErrorMessage } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
-import { formatChatTime, formatMessageTime } from '../utils/chat'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
 import { getMembers } from '../api/chats'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
+import { getMessages, PAGE_SIZE } from '../api/messages'
+import { formatChatTime, formatDayLabel, formatMessageTime, getDayKey } from '../utils/chat'
 
 export default function ChatWindow() {
     const { chatId } = useParams()
@@ -27,6 +27,10 @@ export default function ChatWindow() {
     const [online, setOnline] = useState(chat?.online ?? false)
     const [lastSeen, setLastSeen] = useState(chat?.lastSeen ?? null)
     const [memberCount, setMemberCount] = useState<number | null>(null)
+    const listRef = useRef<HTMLDivElement>(null)
+    const [hasMore, setHasMore] = useState(true)
+    const [loadingOlder, setLoadingOlder] = useState(false)
+    const prevScrollHeight = useRef<number | null>(null)
 
     useEffect(() => {
         const onChange = () => setVisible(document.visibilityState === 'visible')
@@ -49,13 +53,42 @@ export default function ChatWindow() {
 
     useEffect(() => {
         getMessages(Number(chatId))
-            .then((data) => setMessages([...data].sort((a, b) => a.id - b.id)))
+            .then((data) => {
+                setMessages([...data].sort((a, b) => a.id - b.id))
+                setHasMore(data.length >= PAGE_SIZE)
+            })
             .catch((err) => setError(getErrorMessage(err)))
             .finally(() => setLoading(false))
     }, [chatId])
 
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView()
+    const loadOlder = () => {
+        if (loadingOlder || !hasMore || messages.length === 0) return
+
+        setLoadingOlder(true)
+        getMessages(Number(chatId), messages[0].id)
+            .then((data) => {
+                prevScrollHeight.current = listRef.current?.scrollHeight ?? null
+                setMessages((prev) => {
+                    const known = new Set(prev.map((m) => m.id))
+                    const older = data.filter((m) => !known.has(m.id))
+                    return [...older, ...prev].sort((a, b) => a.id - b.id)
+                })
+                setHasMore(data.length >= PAGE_SIZE)
+            })
+            .catch((err) => setError(getErrorMessage(err)))
+            .finally(() => setLoadingOlder(false))
+    }
+
+    useLayoutEffect(() => {
+        const list = listRef.current
+        if (!list) return
+
+        if (prevScrollHeight.current !== null) {
+            list.scrollTop += list.scrollHeight - prevScrollHeight.current
+            prevScrollHeight.current = null
+        } else {
+            bottomRef.current?.scrollIntoView()
+        }
     }, [messages])
 
     useEffect(() => {
@@ -133,30 +166,46 @@ export default function ChatWindow() {
                 </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto bg-gray-100 p-4 space-y-2">
+            <div
+                ref={listRef}
+                onScroll={(e) => {
+                    if (e.currentTarget.scrollTop < 80) loadOlder()
+                }}
+                className="flex-1 overflow-y-auto bg-gray-100 p-4 space-y-2 [overflow-anchor:none]"
+            >
                 {loading && <p className="text-center text-gray-500">Loading...</p>}
                 {error && <p className="text-center text-red-600">{error}</p>}
                 {!loading && !error && messages.length === 0 && (
                     <p className="text-center text-gray-500">No messages yet. Say hi.</p>
                 )}
 
-                {messages.map((m) => {
+                {messages.map((m, i) => {
                     const mine = m.senderId === user?.userId
+                    const showDay = i === 0 || getDayKey(messages[i - 1].createdAt) !== getDayKey(m.createdAt)
                     return (
-                        <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                            <div
-                                className={`max-w-[75%] rounded-lg px-3 py-2 ${mine ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'
-                                    }`}
-                            >
-                                {isGroup && !mine && (
-                                    <p className="text-xs font-semibold text-blue-600">{m.senderUsername}</p>
-                                )}
-                                <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                                <p className={`mt-1 text-right text-[10px] ${mine ? 'text-blue-100' : 'text-gray-400'}`}>
-                                    {formatMessageTime(m.createdAt)}
-                                </p>
+                        <Fragment key={m.id}>
+                            {showDay && (
+                                <div className="flex justify-center py-2">
+                                    <span className="bg-white text-gray-500 text-xs rounded-full px-3 py-1 shadow-sm">
+                                        {formatDayLabel(m.createdAt)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                                <div
+                                    className={`max-w-[75%] rounded-lg px-3 py-2 ${mine ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'
+                                        }`}
+                                >
+                                    {isGroup && !mine && (
+                                        <p className="text-xs font-semibold text-blue-600">{m.senderUsername}</p>
+                                    )}
+                                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                                    <p className={`mt-1 text-right text-[10px] ${mine ? 'text-blue-100' : 'text-gray-400'}`}>
+                                        {formatMessageTime(m.createdAt)}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        </Fragment>
                     )
                 })}
                 <div ref={bottomRef} />
