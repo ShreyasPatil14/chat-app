@@ -24,12 +24,18 @@ public class ChatController {
     }
 
     @PostMapping("/group")
-    public ResponseEntity<ChatResponse> createGroupChat(@AuthenticationPrincipal User user, @Valid @RequestBody CreateGroupRequest request){
+    public ResponseEntity<ChatResponse> createGroupChat(@AuthenticationPrincipal User user, @Valid @RequestBody CreateGroupRequest request) {
         return ResponseEntity.ok(chatService.createGroupChat(user, request));
     }
 
+    @GetMapping("/{chatId}/members")
+    public ResponseEntity<List<ChatMemberResponse>> getMembers(@AuthenticationPrincipal User user,
+                                                               @PathVariable Long chatId) {
+        return ResponseEntity.ok(chatService.getMembers(user, chatId));
+    }
+
     @GetMapping
-    public ResponseEntity<List<ChatSummaryResponse>> getMyChats(@AuthenticationPrincipal User user){
+    public ResponseEntity<List<ChatSummaryResponse>> getMyChats(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(chatService.getMyChats(user));
     }
 
@@ -40,7 +46,7 @@ public class ChatController {
     }
 
     @DeleteMapping("/{chatId}/members/{userId}")
-    public ResponseEntity<Void> removeMember(@AuthenticationPrincipal User user, @PathVariable Long chatId, @PathVariable Long userId){
+    public ResponseEntity<Void> removeMember(@AuthenticationPrincipal User user, @PathVariable Long chatId, @PathVariable Long userId) {
         chatService.removeMember(user, chatId, userId);
         return ResponseEntity.ok().build();
     }
