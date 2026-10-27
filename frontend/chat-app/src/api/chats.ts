@@ -6,3 +6,6 @@ export const getMyChats = () =>
 
 export const createDirectChat = (userId: number) =>
   api.post<ChatResponse>('/api/chats/direct', { userId }).then((res) => res.data)
+
+export const createGroupChat = (name: string, memberIds: number[]) =>
+  api.post<ChatResponse>('/api/chats/group', { name, memberIds }).then((res) => res.data)
