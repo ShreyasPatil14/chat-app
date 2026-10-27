@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import { useSocket } from '../hooks/useSocket'
 import type { Message } from '../types/message'
+import { useNavigate } from 'react-router-dom'
 
 export default function ChatList() {
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -14,6 +15,8 @@ export default function ChatList() {
   const { client, connected } = useSocket()
   const chatsRef = useRef<ChatSummary[]>([])
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     chatsRef.current = chats
@@ -43,6 +46,7 @@ export default function ChatList() {
             ? {
               ...c,
               lastMessage: msg.content,
+              lastMessageSender: msg.senderUsername,
               lastMessageAt: msg.createdAt,
               unreadCount: msg.senderId === user?.userId ? c.unreadCount : c.unreadCount + 1,
             }
@@ -90,6 +94,32 @@ export default function ChatList() {
         {sorted.map((chat) => (
           <ChatListItem key={chat.id} chat={chat} />
         ))}
+      </div>
+      {menuOpen && <div className="fixed inset-0" onClick={() => setMenuOpen(false)} />}
+      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-2">
+        {menuOpen && (
+          <div className="bg-white rounded-lg shadow-lg border overflow-hidden">
+            <button
+              onClick={() => navigate('/new-chat')}
+              className="block w-full text-left px-4 py-3 hover:bg-gray-100"
+            >
+              New chat
+            </button>
+            <button
+              onClick={() => navigate('/new-group')}
+              className="block w-full text-left px-4 py-3 hover:bg-gray-100"
+            >
+              New group
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="New chat or group"
+          className="w-14 h-14 rounded-full bg-blue-600 text-white text-3xl shadow-lg hover:bg-blue-700"
+        >
+          +
+        </button>
       </div>
     </div>
   )
