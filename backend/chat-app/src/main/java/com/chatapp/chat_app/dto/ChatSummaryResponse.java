@@ -20,6 +20,7 @@ public class ChatSummaryResponse {
     private boolean online;
     private LocalDateTime lastSeen;
     private String lastMessage;
+    private String lastMessageSender;
     private LocalDateTime lastMessageAt;
     private long unreadCount;
 }
