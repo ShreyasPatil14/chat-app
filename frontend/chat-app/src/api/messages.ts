@@ -1,7 +1,8 @@
 import { api } from "./axios";
 import type { Message } from "../types/message";
 
-export const getMessages = (chatId: number, before?: number, limit = 30) =>
+export const PAGE_SIZE = 30
+export const getMessages = (chatId: number, before?: number, limit = PAGE_SIZE) =>
   api
     .get<
       Message[]
