@@ -15,3 +15,6 @@ export const getMembers = (chatId: number) =>
 
 export const removeMember = (chatId: number, userId: number) =>
   api.delete(`/api/chats/${chatId}/members/${userId}`)
+
+export const addMember = (chatId: number, userId: number) =>
+  api.post(`/api/chats/${chatId}/members`, { userId })
