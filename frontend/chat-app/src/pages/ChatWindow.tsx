@@ -8,6 +8,7 @@ import { formatChatTime, formatMessageTime } from '../utils/chat'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
+import { getMembers } from '../api/chats'
 
 export default function ChatWindow() {
     const { chatId } = useParams()
@@ -25,6 +26,7 @@ export default function ChatWindow() {
     const otherUserId = chat?.otherUserId
     const [online, setOnline] = useState(chat?.online ?? false)
     const [lastSeen, setLastSeen] = useState(chat?.lastSeen ?? null)
+    const [memberCount, setMemberCount] = useState<number | null>(null)
 
     useEffect(() => {
         const onChange = () => setVisible(document.visibilityState === 'visible')
@@ -81,6 +83,13 @@ export default function ChatWindow() {
         return () => sub.unsubscribe()
     }, [client, connected, otherUserId])
 
+    useEffect(() => {
+        if (chat?.type !== 'GROUP') return
+        getMembers(Number(chatId))
+            .then((data) => setMemberCount(data.length))
+            .catch(() => { })
+    }, [chatId, chat?.type])
+
     const handleSend = (e: SyntheticEvent) => {
         e.preventDefault()
         const content = text.trim()
@@ -101,6 +110,9 @@ export default function ChatWindow() {
         if (online) status = 'online'
         else if (lastSeen) status = `last seen ${formatChatTime(lastSeen)}`
     }
+    if (chat?.type === 'GROUP' && memberCount !== null) {
+        status = `${memberCount} members`
+    }
 
     return (
         <div className="h-screen flex flex-col">
@@ -108,11 +120,17 @@ export default function ChatWindow() {
                 <button onClick={() => navigate('/')} className="text-xl text-gray-600">
                     &larr;
                 </button>
-                <Avatar name={name} />
-                <div className="min-w-0">
-                    <p className="font-medium truncate">{name}</p>
-                    {status && <p className="text-xs text-gray-500">{status}</p>}
-                </div>
+                <button
+                    onClick={() => navigate(`/chats/${chatId}/info`, { state: { chat } })}
+                    disabled={!isGroup}
+                    className={`flex items-center gap-3 min-w-0 text-left ${isGroup ? 'cursor-pointer' : 'cursor-default'}`}
+                >
+                    <Avatar name={name} />
+                    <div className="min-w-0">
+                        <p className="font-medium truncate">{name}</p>
+                        {status && <p className="text-xs text-gray-500">{status}</p>}
+                    </div>
+                </button>
             </header>
 
             <div className="flex-1 overflow-y-auto bg-gray-100 p-4 space-y-2">
