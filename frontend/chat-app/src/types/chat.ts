@@ -25,3 +25,10 @@ export interface PresenceUpdate {
   lastSeen: string | null
 }
 
+export interface ChatMember {
+  id: number
+  username: string
+  role: string
+  online: boolean
+  lastSeen: string | null
+}
