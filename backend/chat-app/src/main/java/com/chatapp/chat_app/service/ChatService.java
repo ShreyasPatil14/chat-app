@@ -1,5 +1,6 @@
 package com.chatapp.chat_app.service;
 
+import com.chatapp.chat_app.dto.ChatMemberResponse;
 import com.chatapp.chat_app.dto.ChatResponse;
 import com.chatapp.chat_app.dto.ChatSummaryResponse;
 import com.chatapp.chat_app.dto.CreateGroupRequest;
@@ -103,6 +104,26 @@ public class ChatService {
         chatMemberRepository.saveAll(members);
 
         return new ChatResponse(newChat.getId(), newChat.getType(), newChat.getName());
+    }
+
+    // get members of a chat:
+    @Transactional(readOnly = true)
+    public List<ChatMemberResponse> getMembers(User currentUser, Long chatId) {
+        if (!chatMemberRepository.existsByChatIdAndUserId(chatId, currentUser.getId())) {
+            throw new IllegalArgumentException("You are not a member of this chat");
+        }
+
+        return chatMemberRepository.findByChatId(chatId).stream()
+                .map(m -> {
+                    User u = m.getUser();
+                    return new ChatMemberResponse(
+                            u.getId(),
+                            u.getUsername(),
+                            m.getRole().name(),
+                            presenceService.isOnline(u.getId()),
+                            u.getLastSeen());
+                })
+                .toList();
     }
 
     // get all chats for a user with online/offline status for direct chats:
