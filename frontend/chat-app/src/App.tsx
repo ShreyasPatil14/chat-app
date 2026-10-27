@@ -5,6 +5,8 @@ import { useAuth } from './hooks/useAuth'
 import ChatList from './pages/ChatList'
 import ChatWindow from './pages/ChatWindow'
 import { useDeliveryReceipts } from './hooks/useDeliveryReceipts'
+import NewChat from './pages/NewChat'
+import NewGroup from './pages/NewGroup'
 
 export default function App() {
   const { token } = useAuth()
@@ -16,6 +18,8 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/" element={token ? <ChatList /> : <Navigate to="/login" replace />} />
       <Route path="/chats/:chatId" element={token ? <ChatWindow /> : <Navigate to="/login" replace />} />
+      <Route path="/new-chat" element={token ? <NewChat /> : <Navigate to="/login" replace />} />
+      <Route path="/new-group" element={token ? <NewGroup /> : <Navigate to="/login" replace />} />
     </Routes>
   )
 }
