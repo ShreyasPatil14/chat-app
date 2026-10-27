@@ -12,6 +12,7 @@ export interface ChatSummary {
   name: string
   lastMessage: string | null
   lastMessageAt: string | null
+  lastMessageSender: string | null
   otherUserId: number | null
   online: boolean
   lastSeen: string | null
