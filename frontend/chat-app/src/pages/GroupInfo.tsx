@@ -18,6 +18,7 @@ export default function GroupInfo() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [leaving, setLeaving] = useState(false)
+  const [removingId, setRemovingId] = useState<number | null>(null)
 
   const groupName = chat?.name ?? 'Group'
 
@@ -56,6 +57,24 @@ export default function GroupInfo() {
     }
   }
 
+  const isAdmin = members.some((m) => m.id === user?.userId && m.role === 'ADMIN')
+
+  const handleRemove = async (m: ChatMember) => {
+    if (removingId !== null) return
+    if (!window.confirm(`Remove ${m.username} from the group?`)) return
+
+    setRemovingId(m.id)
+    setError('')
+    try {
+      await removeMember(Number(chatId), m.id)
+      setMembers((prev) => prev.filter((x) => x.id !== m.id))
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
   const statusOf = (m: ChatMember) => {
     if (m.id === user?.userId) return 'You'
     if (m.online) return 'online'
@@ -86,6 +105,18 @@ export default function GroupInfo() {
         {loading && <p className="p-4 text-center text-gray-500">Loading...</p>}
         {error && <p className="p-4 text-center text-red-600">{error}</p>}
 
+        {isAdmin && (
+          <button
+            onClick={() => navigate(`/chats/${chatId}/add-member`)}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 cursor-pointer"
+          >
+            <span className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 text-2xl flex items-center justify-center">
+              +
+            </span>
+            <span className="font-medium text-blue-600">Add member</span>
+          </button>
+        )}
+
         {members.map((m) => (
           <div key={m.id} className="flex items-center gap-3 px-4 py-3">
             <Avatar name={m.username} online={m.online} />
@@ -97,6 +128,15 @@ export default function GroupInfo() {
               <span className="text-xs text-blue-600 border border-blue-600 rounded px-1.5 py-0.5">
                 Admin
               </span>
+            )}
+            {isAdmin && m.id !== user?.userId && (
+              <button
+                onClick={() => handleRemove(m)}
+                disabled={removingId === m.id}
+                className="text-sm text-red-600 cursor-pointer disabled:opacity-50"
+              >
+                {removingId === m.id ? 'Removing...' : 'Remove'}
+              </button>
             )}
           </div>
         ))}
