@@ -24,12 +24,16 @@ self.addEventListener('notificationclick', (event) => {
 importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging-compat.js')
 
+// The config comes from the URL this file was registered with (see src/firebase.ts),
+// so no keys are written in this file.
+const params = new URL(self.location.href).searchParams
+
 firebase.initializeApp({
-  apiKey: 'AIzaSyDnoe6fsxFhrFSja6qNGQW7YUXhV_dooUw',
-  authDomain: 'chat-app-f28a3.firebaseapp.com',
-  projectId: 'chat-app-f28a3',
-  messagingSenderId: '251641369364',
-  appId: '1:251641369364:web:e63a68a89d9e14eb1ee801',
+  apiKey: params.get('apiKey'),
+  authDomain: params.get('authDomain'),
+  projectId: params.get('projectId'),
+  messagingSenderId: params.get('messagingSenderId'),
+  appId: params.get('appId'),
 })
 
 firebase.messaging()
