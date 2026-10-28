@@ -1,11 +1,11 @@
-import { data, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import { getErrorMessage } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
-import { getMembers } from '../api/chats'
+import { deleteChat, getMembers } from '../api/chats'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { getMessages, PAGE_SIZE } from '../api/messages'
 import { formatChatTime, formatDayLabel, formatMessageTime, getDayKey } from '../utils/chat'
@@ -31,6 +31,8 @@ export default function ChatWindow() {
     const [hasMore, setHasMore] = useState(true)
     const [loadingOlder, setLoadingOlder] = useState(false)
     const prevScrollHeight = useRef<number | null>(null)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         const onChange = () => setVisible(document.visibilityState === 'visible')
@@ -135,6 +137,21 @@ export default function ChatWindow() {
         setText('')
     }
 
+    const handleDelete = async () => {
+        setMenuOpen(false)
+        if (deleting) return
+        if (!window.confirm('Delete this chat? Messages will be removed for you only.')) return
+
+        setDeleting(true)
+        try {
+            await deleteChat(Number(chatId))
+            navigate('/', { replace: true })
+        } catch (err) {
+            setError(getErrorMessage(err))
+            setDeleting(false)
+        }
+    }
+
     const name = chat?.name ?? 'Chat'
     const isGroup = chat?.type === 'GROUP'
 
@@ -164,6 +181,30 @@ export default function ChatWindow() {
                         {status && <p className="text-xs text-gray-500">{status}</p>}
                     </div>
                 </button>
+                {chat?.type === 'DIRECT' && (
+                    <div className="relative ml-auto">
+                        <button
+                            onClick={() => setMenuOpen(!menuOpen)}
+                            aria-label="Menu"
+                            className="px-2 text-xl text-gray-600 cursor-pointer"
+                        >
+                            &#8942;
+                        </button>
+                        {menuOpen && (
+                            <>
+                                <div className="fixed inset-0" onClick={() => setMenuOpen(false)} />
+                                <div className="absolute right-0 top-full mt-1 z-10 bg-white rounded-lg shadow-lg border overflow-hidden">
+                                    <button
+                                        onClick={handleDelete}
+                                        className="block w-full whitespace-nowrap text-left px-4 py-3 text-red-600 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                        Delete chat
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </header>
 
             <div
