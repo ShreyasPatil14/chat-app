@@ -9,10 +9,13 @@ import NewChat from './pages/NewChat'
 import NewGroup from './pages/NewGroup'
 import GroupInfo from './pages/GroupInfo'
 import AddMember from './pages/AddMember'
+import { usePushNotifications } from './hooks/usePushNotifications'
 
 export default function App() {
   const { token } = useAuth()
   useDeliveryReceipts()
+  useDeliveryReceipts()
+  usePushNotifications()
 
   return (
     <Routes>
