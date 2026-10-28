@@ -31,17 +31,18 @@ public class MessageService {
     // get messages for chat:
     @Transactional(readOnly = true)
     public List<MessageResponse> getMessages(User currentUser, Long chatId, Long before, int limit) {
-        if (!chatMemberRepository.existsByChatIdAndUserId(chatId, currentUser.getId())) {
-            throw new IllegalArgumentException("You are not a member of this chat");
-        }
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("You are not a member of this chat"));
+        Long cleared = member.getClearedUpToMessageId();
+
         int size = Math.max(1, Math.min(limit, 50));
         Pageable pageable = PageRequest.of(0, size);
 
         List<Message> messages;
         if (before == null) {
-            messages = messageRepository.findByChatIdOrderByIdDesc(chatId, pageable);
+            messages = messageRepository.findByChatIdAndIdGreaterThanOrderByIdDesc(chatId, cleared, pageable);
         } else {
-            messages = messageRepository.findByChatIdAndIdLessThanOrderByIdDesc(chatId, before, pageable);
+            messages = messageRepository.findByChatIdAndIdGreaterThanAndIdLessThanOrderByIdDesc(chatId, cleared, before, pageable);
         }
 
         return messages.stream()
@@ -64,9 +65,10 @@ public class MessageService {
 
         for (ChatMember membership : memberships) {
             Long chatId = membership.getChat().getId();
-            Long afterId = membership.getLastDeliveredMessageId() != null
+            long delivered = membership.getLastDeliveredMessageId() != null
                     ? membership.getLastDeliveredMessageId()
                     : 0L;
+            Long afterId = Math.max(delivered, membership.getClearedUpToMessageId());
 
             List<Message> missed = messageRepository
                     .findByChatIdAndIdGreaterThanOrderByIdAsc(chatId, afterId, PageRequest.of(0, 200));
@@ -87,13 +89,13 @@ public class MessageService {
 
     // save message:
     @Transactional
-    public MessageResponse saveMessage(User sender, SendMessageRequest request){
-        if(!chatMemberRepository.existsByChatIdAndUserId(request.getChatId(), sender.getId())){
+    public MessageResponse saveMessage(User sender, SendMessageRequest request) {
+        if (!chatMemberRepository.existsByChatIdAndUserId(request.getChatId(), sender.getId())) {
             throw new IllegalArgumentException("You are not a member of this chat");
         }
 
         Optional<Chat> chat = chatRepository.findById(request.getChatId());
-        if(chat.isEmpty()){
+        if (chat.isEmpty()) {
             throw new IllegalArgumentException("Chat not found");
         }
 
@@ -103,6 +105,11 @@ public class MessageService {
         message.setContent(request.getContent().trim());
 
         Message response = messageRepository.save(message);
+        List<ChatMember> toRestore = chatMemberRepository.findByChatId(chat.get().getId()).stream()
+                .filter(ChatMember::isDeleted)
+                .toList();
+        toRestore.forEach(m -> m.setDeleted(false));
+        chatMemberRepository.saveAll(toRestore);
 
         return new MessageResponse(
                 response.getId(),
@@ -116,14 +123,14 @@ public class MessageService {
 
     // mark message delivered:
     @Transactional
-    public void markDelivered(User user, ReceiptRequest request){
+    public void markDelivered(User user, ReceiptRequest request) {
         Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(request.getChatId(), user.getId());
-        if(member.isEmpty()){
+        if (member.isEmpty()) {
             throw new IllegalArgumentException("You are not a member of this chat");
         }
 
         ChatMember m = member.get();
-        if(m.getLastDeliveredMessageId() == null || m.getLastDeliveredMessageId() < request.getMessageId()){
+        if (m.getLastDeliveredMessageId() == null || m.getLastDeliveredMessageId() < request.getMessageId()) {
             m.setLastDeliveredMessageId(request.getMessageId());
         }
         chatMemberRepository.save(m);
@@ -131,14 +138,14 @@ public class MessageService {
 
     // mark message read:
     @Transactional
-    public void markRead(User user, ReceiptRequest request){
+    public void markRead(User user, ReceiptRequest request) {
         Optional<ChatMember> member = chatMemberRepository.findByChatIdAndUserId(request.getChatId(), user.getId());
-        if(member.isEmpty()){
+        if (member.isEmpty()) {
             throw new IllegalArgumentException("You are not a member of this chat");
         }
 
         ChatMember m = member.get();
-        if(m.getLastReadMessageId() == null || m.getLastReadMessageId() < request.getMessageId()){
+        if (m.getLastReadMessageId() == null || m.getLastReadMessageId() < request.getMessageId()) {
             m.setLastReadMessageId(request.getMessageId());
         }
 
