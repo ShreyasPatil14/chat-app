@@ -39,6 +39,12 @@ public class ChatMember {
 
     private Long lastReadMessageId;
 
+    @Column(nullable = false)
+    private Long clearedUpToMessageId = 0L;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
     @PrePersist
     private void onCreate(){
         this.joinedAt = LocalDateTime.now();
