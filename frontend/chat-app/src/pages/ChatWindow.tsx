@@ -5,14 +5,16 @@ import { useAuth } from '../hooks/useAuth'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
-import { deleteChat, getMembers } from '../api/chats'
+import { deleteChat, getMembers, getMyChats } from '../api/chats'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { getMessages, PAGE_SIZE } from '../api/messages'
 import { formatChatTime, formatDayLabel, formatMessageTime, getDayKey } from '../utils/chat'
 
 export default function ChatWindow() {
     const { chatId } = useParams()
-    const chat = useLocation().state?.chat as ChatSummary | undefined
+    const stateChat = useLocation().state?.chat as ChatSummary | undefined
+    const [fetchedChat, setFetchedChat] = useState<ChatSummary | undefined>()
+    const chat = stateChat ?? fetchedChat
     const navigate = useNavigate()
     const { user } = useAuth()
     const [messages, setMessages] = useState<Message[]>([])
@@ -124,6 +126,21 @@ export default function ChatWindow() {
             .then((data) => setMemberCount(data.length))
             .catch(() => { })
     }, [chatId, chat?.type])
+
+    useEffect(() => {
+        if (stateChat) return
+
+        getMyChats()
+            .then((list) => {
+                const found = list.find((c) => c.id === Number(chatId))
+                setFetchedChat(found)
+                if (found) {
+                    setOnline(found.online)
+                    setLastSeen(found.lastSeen)
+                }
+            })
+            .catch(() => { })
+    }, [stateChat, chatId])
 
     const handleSend = (e: SyntheticEvent) => {
         e.preventDefault()
