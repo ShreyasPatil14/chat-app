@@ -14,7 +14,6 @@ import { usePushNotifications } from './hooks/usePushNotifications'
 export default function App() {
   const { token } = useAuth()
   useDeliveryReceipts()
-  useDeliveryReceipts()
   usePushNotifications()
 
   return (
