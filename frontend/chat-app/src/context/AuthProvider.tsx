@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { AuthContext, type AuthUser } from './AuthContext'
 import type { AuthResponse } from '../types/auth'
+import { unregisterDeviceToken } from '../api/devices'
+import { removeFcmToken } from '../firebase'
 
 function loadUser(): AuthUser | null {
   const raw = localStorage.getItem('user')
@@ -19,7 +21,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authUser)
   }
 
-  const logout = () => {
+  const logout = async () => {
+    const fcmToken = localStorage.getItem('fcmToken')
+    if (fcmToken) {
+      try {
+        await unregisterDeviceToken(fcmToken)
+      } catch (err) {
+        console.error('Could not unregister device token:', err)
+      }
+      localStorage.removeItem('fcmToken')
+    }
+    await removeFcmToken()
+
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setToken(null)
