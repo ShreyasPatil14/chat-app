@@ -37,6 +37,12 @@ public class ChatService {
         Optional<Chat> chat = chatMemberRepository.findDirectChat(currentUser.getId(), otherUserId);
 
         if (chat.isPresent()) {
+            chatMemberRepository.findByChatIdAndUserId(chat.get().getId(), currentUser.getId())
+                    .filter(ChatMember::isDeleted)
+                    .ifPresent(m -> {
+                        m.setDeleted(false);
+                        chatMemberRepository.save(m);
+                    });
             return new ChatResponse(chat.get().getId(), chat.get().getType(), otherUser.getUsername());
         }
 
@@ -133,6 +139,10 @@ public class ChatService {
         List<ChatSummaryResponse> result = new ArrayList<>();
 
         for (ChatMember membership : memberships) {
+            if (membership.isDeleted()) {
+                continue;
+            }
+
             Chat chat = membership.getChat();
 
             String name;
@@ -159,14 +169,17 @@ public class ChatService {
                 }
             }
 
-            Optional<Message> last = messageRepository.findFirstByChatIdOrderByIdDesc(chat.getId());
+            Long cleared = membership.getClearedUpToMessageId();
+
+            Optional<Message> last = messageRepository
+                    .findFirstByChatIdAndIdGreaterThanOrderByIdDesc(chat.getId(), cleared);
             String lastMessage = last.map(Message::getContent).orElse(null);
             LocalDateTime lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
             String lastMessageSender = last.map(m -> m.getSender().getUsername()).orElse(null);
 
-            Long lastRead = membership.getLastReadMessageId() != null ? membership.getLastReadMessageId() : 0L;
+            long lastRead = membership.getLastReadMessageId() != null ? membership.getLastReadMessageId() : 0L;
             long unreadCount = messageRepository.countByChatIdAndIdGreaterThanAndSenderIdNot(
-                    chat.getId(), lastRead, currentUser.getId());
+                    chat.getId(), Math.max(lastRead, cleared), currentUser.getId());
 
             result.add(new ChatSummaryResponse(
                     chat.getId(), chat.getType(), name, otherUserId, online, lastSeen, lastMessage, lastMessageSender, lastMessageAt, unreadCount));
@@ -243,5 +256,24 @@ public class ChatService {
         }
 
         chatMemberRepository.delete(target.get());
+    }
+
+    // delete a direct chat for the current user only:
+    @Transactional
+    public void deleteChat(User currentUser, Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found"));
+
+        ChatMember member = chatMemberRepository.findByChatIdAndUserId(chatId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("You are not a member of this chat"));
+
+        if (chat.getType() != ChatType.DIRECT) {
+            throw new IllegalArgumentException("Group chats cannot be deleted, leave the group instead");
+        }
+
+        messageRepository.findFirstByChatIdOrderByIdDesc(chatId)
+                .ifPresent(last -> member.setClearedUpToMessageId(last.getId()));
+        member.setDeleted(true);
+        chatMemberRepository.save(member);
     }
 }
