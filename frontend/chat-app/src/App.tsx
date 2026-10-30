@@ -30,7 +30,7 @@ export default function App() {
 
   const handleSplashDone = () => {
     try {
-      // sessionStorage.setItem('splashShown', '1')
+      sessionStorage.setItem('splashShown', '1')
     } catch {
       // storage unavailable: the splash simply shows again next time
     }
