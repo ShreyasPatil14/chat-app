@@ -17,6 +17,7 @@ export default function ChatList() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   useEffect(() => {
     chatsRef.current = chats
@@ -79,10 +80,31 @@ export default function ChatList() {
   return (
     <div className="h-screen flex flex-col">
       <header className="flex items-center justify-between px-4 py-3 border-b">
-        <h1 className="text-xl font-bold text-blue-600">ChatApp</h1>
-        <button onClick={logout} className="text-sm text-gray-600">
-          Log out
-        </button>
+        <h1 className="text-xl font-bold text-blue-600 gradient-text">ChatApp</h1>
+        <div className="relative">
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="max-w-40 truncate text-lg font-medium text-gray-700 cursor-pointer"
+          >
+            {user?.username} &#9662;
+          </button>
+          {userMenuOpen && (
+            <>
+              <div className="fixed inset-0" onClick={() => setUserMenuOpen(false)} />
+              <div className="absolute right-0 top-full z-10 bg-white rounded-sm shadow-lg border-none overflow-hidden">
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    logout()
+                  }}
+                  className="block w-full whitespace-nowrap text-left px-2 py-1 text-red-600 hover:bg-gray-100 cursor-pointer"
+                >
+                  Log out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto">
