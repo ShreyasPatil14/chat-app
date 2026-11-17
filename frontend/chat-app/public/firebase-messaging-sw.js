@@ -56,7 +56,7 @@ messaging.onBackgroundMessage((payload) => {
 
   const { title, body, chatId, messageId } = payload.data || {}
 
-  self.registration.showNotification(title || 'ChatApp', {
+  return self.registration.showNotification(title || 'ChatApp', {
     body: body || '',
     icon: '/pwa-192x192.png',
     badge: '/pwa-64x64.png',
