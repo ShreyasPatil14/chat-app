@@ -16,9 +16,13 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import com.chatapp.chat_app.model.Chat;
+import com.chatapp.chat_app.model.ChatType;
+import com.chatapp.chat_app.repository.ChatRepository;
 
 import java.security.Principal;
 import java.util.List;
+
 
 @Controller
 @RequiredArgsConstructor
@@ -30,6 +34,7 @@ public class ChatSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final PresenceService presenceService;
     private final PushNotificationService pushNotificationService;
+    private final ChatRepository chatRepository;
 
     private User getUser(Principal principal) {
         return userRepository.findById(Long.valueOf(principal.getName()))
@@ -41,6 +46,15 @@ public class ChatSocketController {
         MessageResponse response = messageService.saveMessage(getUser(principal), request);
 
         List<ChatMember> members = chatMemberRepository.findByChatId(request.getChatId());
+
+        Chat chat = chatRepository.findById(request.getChatId())
+                .orElseThrow(() -> new IllegalArgumentException("Chat not found"));
+        boolean isGroup = chat.getType() == ChatType.GROUP;
+        String pushTitle = isGroup ? chat.getName() : response.getSenderUsername();
+        String pushBody = isGroup
+                ? response.getSenderUsername() + ": " + response.getContent()
+                : response.getContent();
+
         for (ChatMember member : members) {
             Long memberId = member.getUser().getId();
 
@@ -51,8 +65,8 @@ public class ChatSocketController {
             if (!memberId.equals(response.getSenderId()) && !presenceService.isOnline(memberId)) {
                 pushNotificationService.sendMessagePush(
                         memberId,
-                        response.getSenderUsername(),
-                        response.getContent(),
+                        pushTitle,
+                        pushBody,
                         response.getChatId(),
                         response.getId());
             }
