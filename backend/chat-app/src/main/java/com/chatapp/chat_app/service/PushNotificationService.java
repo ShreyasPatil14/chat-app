@@ -2,13 +2,7 @@ package com.chatapp.chat_app.service;
 
 import com.chatapp.chat_app.model.DeviceToken;
 import com.chatapp.chat_app.repository.DeviceTokenRepository;
-import com.google.firebase.messaging.BatchResponse;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.MessagingErrorCode;
-import com.google.firebase.messaging.MulticastMessage;
-import com.google.firebase.messaging.Notification;
-import com.google.firebase.messaging.SendResponse;
+import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,12 +29,14 @@ public class PushNotificationService {
 
         MulticastMessage message = MulticastMessage.builder()
                 .addAllTokens(devices.stream().map(DeviceToken::getFcmToken).toList())
-                .setNotification(Notification.builder()
-                        .setTitle(title)
-                        .setBody(body)
-                        .build())
+                .putData("title", title)
+                .putData("body", body)
                 .putData("chatId", chatId.toString())
                 .putData("messageId", messageId.toString())
+                .setWebpushConfig(WebpushConfig.builder()
+                        .putHeader("Urgency", "high")
+                        .putHeader("TTL", "86400")
+                        .build())
                 .build();
 
         try {
