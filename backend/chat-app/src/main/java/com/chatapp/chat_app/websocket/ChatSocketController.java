@@ -19,6 +19,8 @@ import org.springframework.stereotype.Controller;
 import com.chatapp.chat_app.model.Chat;
 import com.chatapp.chat_app.model.ChatType;
 import com.chatapp.chat_app.repository.ChatRepository;
+import com.chatapp.chat_app.dto.TypingRequest;
+import com.chatapp.chat_app.dto.TypingResponse;
 
 import java.security.Principal;
 import java.util.List;
@@ -81,5 +83,22 @@ public class ChatSocketController {
     @MessageMapping("/chat.read")
     public void read(@Payload @Valid ReceiptRequest request, Principal principal) {
         messageService.markRead(getUser(principal), request);
+    }
+
+    @MessageMapping("/chat.typing")
+    public void typing(@Payload @Valid TypingRequest request, Principal principal) {
+        User sender = getUser(principal);
+        List<ChatMember> members = chatMemberRepository.findByChatId(request.getChatId());
+
+        boolean isMember = members.stream()
+                .anyMatch(m -> m.getUser().getId().equals(sender.getId()));
+        if (!isMember) return;
+
+        TypingResponse event = new TypingResponse(request.getChatId(), sender.getId(), sender.getUsername());
+        for (ChatMember member : members) {
+            Long memberId = member.getUser().getId();
+            if (memberId.equals(sender.getId())) continue;
+            messagingTemplate.convertAndSendToUser(memberId.toString(), "/queue/typing", event);
+        }
     }
 }
