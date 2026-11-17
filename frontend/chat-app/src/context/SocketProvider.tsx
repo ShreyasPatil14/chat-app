@@ -21,9 +21,22 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     })
 
     stomp.activate()
+    let hideTimer: ReturnType<typeof setTimeout> | undefined
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        hideTimer = setTimeout(() => stomp.deactivate(), 10000)
+      } else {
+        clearTimeout(hideTimer)
+        stomp.activate()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
     setClient(stomp)
 
     return () => {
+      clearTimeout(hideTimer)
+      document.removeEventListener('visibilitychange', handleVisibility)
       stomp.deactivate()
       setClient(null)
       setConnected(false)
