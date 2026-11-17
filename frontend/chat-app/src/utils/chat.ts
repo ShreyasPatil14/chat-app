@@ -1,55 +1,91 @@
 const COLORS = [
-  'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-600',
-  'bg-teal-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500',
-]
+  "bg-red-500",
+  "bg-orange-500",
+  "bg-amber-500",
+  "bg-green-600",
+  "bg-teal-500",
+  "bg-blue-500",
+  "bg-indigo-500",
+  "bg-purple-500",
+  "bg-pink-500",
+];
 
 export function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
-  return (first + last).toUpperCase()
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
 }
 
 export function getAvatarColor(name: string): string {
-  let hash = 0
+  let hash = 0;
   for (const ch of name) {
-    hash = (hash * 31 + ch.charCodeAt(0)) | 0
+    hash = (hash * 31 + ch.charCodeAt(0)) | 0;
   }
-  return COLORS[Math.abs(hash) % COLORS.length]
+  return COLORS[Math.abs(hash) % COLORS.length];
 }
 
 export function formatChatTime(iso: string | null): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const startOfYesterday = new Date(startOfToday)
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1)
+  if (!iso) return "";
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
   if (date >= startOfToday) {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   }
-  if (date >= startOfYesterday) return 'Yesterday'
-  return date.toLocaleDateString()
+  if (date >= startOfYesterday) return "Yesterday";
+  return date.toLocaleDateString();
 }
 
 export function formatMessageTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function getDayKey(iso: string): string {
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
 export function formatDayLabel(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const startOfYesterday = new Date(startOfToday)
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1)
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
 
-  if (date >= startOfToday) return 'Today'
-  if (date >= startOfYesterday) return 'Yesterday'
-  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+  if (date >= startOfToday) return "Today";
+  if (date >= startOfYesterday) return "Yesterday";
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function formatTyping(names: string[], isGroup: boolean): string {
+  if (names.length === 0) return "";
+  if (!isGroup) return "typing...";
+  if (names.length === 1) return `${names[0]} is typing...`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
+  const others = names.length - 2;
+  return `${names[0]}, ${names[1]} and ${others} other${others > 1 ? "s" : ""} are typing...`;
 }
