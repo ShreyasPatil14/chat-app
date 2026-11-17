@@ -49,7 +49,11 @@ public class PushNotificationService {
             List<DeviceToken> invalid = new ArrayList<>();
             for (int i = 0; i < responses.size(); i++) {
                 if (!responses.get(i).isSuccessful()) {
-                    log.warn("FCM failed for user {}: {}", userId, responses.get(i).getException().getMessagingErrorCode());
+                    log.warn("FCM failed for user {}: errorCode={}, messagingErrorCode={}",
+                            userId,
+                            responses.get(i).getException().getErrorCode(),
+                            responses.get(i).getException().getMessagingErrorCode(),
+                            responses.get(i).getException());
                 }
                 SendResponse response = responses.get(i);
                 if (!response.isSuccessful()
