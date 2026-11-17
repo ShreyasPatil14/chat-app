@@ -6,7 +6,7 @@ import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import type { Message } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
 import { deleteChat, getMembers, getMyChats } from '../api/chats'
-import { Fragment, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { getMessages, PAGE_SIZE } from '../api/messages'
 import { formatChatTime, formatDayLabel, formatMessageTime, getDayKey } from '../utils/chat'
 
@@ -35,6 +35,20 @@ export default function ChatWindow() {
     const prevScrollHeight = useRef<number | null>(null)
     const [menuOpen, setMenuOpen] = useState(false)
     const [deleting, setDeleting] = useState(false)
+    const [typingUsers, setTypingUsers] = useState<Record<number, string>>({})
+    const typingTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+    const lastTypingSent = useRef(0)
+
+    const removeTyping = useCallback((userId: number) => {
+        clearTimeout(typingTimers.current[userId])
+        delete typingTimers.current[userId]
+        setTypingUsers((prev) => {
+            if (!(userId in prev)) return prev
+            const next = { ...prev }
+            delete next[userId]
+            return next
+        })
+    }, [])
 
     useEffect(() => {
         const onChange = () => setVisible(document.visibilityState === 'visible')
@@ -101,11 +115,12 @@ export default function ChatWindow() {
         const sub = client.subscribe('/user/queue/messages', (frame) => {
             const msg: Message = JSON.parse(frame.body)
             if (msg.chatId !== Number(chatId)) return
+            removeTyping(msg.senderId)
             setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
         })
 
         return () => sub.unsubscribe()
-    }, [client, connected, chatId])
+    }, [client, connected, chatId, removeTyping])
 
     useEffect(() => {
         if (!client || !connected || !otherUserId) return
@@ -119,6 +134,26 @@ export default function ChatWindow() {
 
         return () => sub.unsubscribe()
     }, [client, connected, otherUserId])
+
+    useEffect(() => {
+        if (!client || !connected) return
+
+        const timers = typingTimers.current
+        const sub = client.subscribe('/user/queue/typing', (frame) => {
+            const t: { chatId: number; userId: number; username: string } = JSON.parse(frame.body)
+            if (t.chatId !== Number(chatId)) return
+            setTypingUsers((prev) => ({ ...prev, [t.userId]: t.username }))
+            clearTimeout(timers[t.userId])
+            timers[t.userId] = setTimeout(() => removeTyping(t.userId), 3000)
+        })
+
+        return () => {
+            sub.unsubscribe()
+            Object.values(timers).forEach(clearTimeout)
+            Object.keys(timers).forEach((k) => delete timers[Number(k)])
+            setTypingUsers({})
+        }
+    }, [client, connected, chatId, removeTyping])
 
     useEffect(() => {
         if (chat?.type !== 'GROUP') return
@@ -141,6 +176,18 @@ export default function ChatWindow() {
             })
             .catch(() => { })
     }, [stateChat, chatId])
+
+    const handleTextChange = (value: string) => {
+        setText(value)
+        const now = Date.now()
+        if (value.trim() && client && connected && now - lastTypingSent.current > 2000) {
+            lastTypingSent.current = now
+            client.publish({
+                destination: '/app/chat.typing',
+                body: JSON.stringify({ chatId: Number(chatId) }),
+            })
+        }
+    }
 
     const handleSend = (e: SyntheticEvent) => {
         e.preventDefault()
@@ -181,6 +228,18 @@ export default function ChatWindow() {
         status = `${memberCount} members`
     }
 
+    const typingNames = Object.values(typingUsers)
+    let typingText = ''
+    if (typingNames.length > 0) {
+        if (!isGroup) typingText = 'typing...'
+        else if (typingNames.length === 1) typingText = `${typingNames[0]} is typing...`
+        else if (typingNames.length === 2) typingText = `${typingNames[0]} and ${typingNames[1]} are typing...`
+        else {
+            const others = typingNames.length - 2
+            typingText = `${typingNames[0]}, ${typingNames[1]} and ${others} other${others > 1 ? 's' : ''} are typing...`
+        }
+    }
+
     return (
         <div className="h-screen flex flex-col">
             <header className="flex items-center gap-3 px-4 py-3 border-b">
@@ -195,7 +254,11 @@ export default function ChatWindow() {
                     <Avatar name={name} />
                     <div className="min-w-0">
                         <p className="font-medium truncate">{name}</p>
-                        {status && <p className="text-xs text-gray-500">{status}</p>}
+                        {(typingText || status) && (
+                            <p className={`text-xs truncate ${typingText ? 'text-green-600' : 'text-gray-500'}`}>
+                                {typingText || status}
+                            </p>
+                        )}
                     </div>
                 </button>
                 {chat?.type === 'DIRECT' && (
@@ -271,7 +334,7 @@ export default function ChatWindow() {
             <form onSubmit={handleSend} className="flex items-end gap-2 border-t p-3">
                 <textarea
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => handleTextChange(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
