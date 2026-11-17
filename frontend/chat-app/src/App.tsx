@@ -12,6 +12,8 @@ import AddMember from './pages/AddMember'
 import { usePushNotifications } from './hooks/usePushNotifications'
 import { useState } from 'react'
 import SplashScreen from './components/SplashScreen'
+import { useMessageAlerts } from './hooks/useMessageAlerts'
+import MessageAlert from './components/MessageAlert'
 
 function splashAlreadyShown() {
   try {
@@ -25,6 +27,7 @@ export default function App() {
   const { token } = useAuth()
   useDeliveryReceipts()
   usePushNotifications()
+  const { alert, dismiss } = useMessageAlerts()
 
   const [showSplash, setShowSplash] = useState(() => !splashAlreadyShown())
 
@@ -40,6 +43,7 @@ export default function App() {
   return (
     <>
       {showSplash && <SplashScreen onDone={handleSplashDone} />}
+      <MessageAlert alert={alert} onClose={dismiss} />
       <Routes>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
