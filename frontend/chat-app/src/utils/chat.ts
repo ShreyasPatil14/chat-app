@@ -27,14 +27,14 @@ export function formatChatTime(iso: string | null): string {
   startOfYesterday.setDate(startOfYesterday.getDate() - 1)
 
   if (date >= startOfToday) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
   }
   if (date >= startOfYesterday) return 'Yesterday'
   return date.toLocaleDateString()
 }
 
 export function formatMessageTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 export function getDayKey(iso: string): string {
