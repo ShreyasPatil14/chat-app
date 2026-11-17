@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import ChatListItem from '../components/ChatListItem'
 import { getMyChats } from '../api/chats'
 import { getErrorMessage } from '../api/auth'
@@ -7,6 +7,7 @@ import type { ChatSummary, PresenceUpdate } from '../types/chat'
 import { useSocket } from '../hooks/useSocket'
 import type { Message } from '../types/message'
 import { useNavigate } from 'react-router-dom'
+import { formatTyping } from '../utils/chat'
 
 export default function ChatList() {
   const [chats, setChats] = useState<ChatSummary[]>([])
@@ -18,6 +19,20 @@ export default function ChatList() {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [typing, setTyping] = useState<Record<number, Record<number, string>>>({})
+  const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  const removeTyping = useCallback((chatId: number, userId: number) => {
+    const key = `${chatId}:${userId}`
+    clearTimeout(typingTimers.current[key])
+    delete typingTimers.current[key]
+    setTyping((prev) => {
+      if (!prev[chatId]?.[userId]) return prev
+      const chatTyping = { ...prev[chatId] }
+      delete chatTyping[userId]
+      return { ...prev, [chatId]: chatTyping }
+    })
+  }, [])
 
   useEffect(() => {
     chatsRef.current = chats
@@ -35,7 +50,7 @@ export default function ChatList() {
 
     const messageSub = client.subscribe('/user/queue/messages', (frame) => {
       const msg: Message = JSON.parse(frame.body)
-
+      removeTyping(msg.chatId, msg.senderId)
       if (!chatsRef.current.some((c) => c.id === msg.chatId)) {
         getMyChats().then(setChats)
         return
@@ -69,7 +84,30 @@ export default function ChatList() {
       messageSub.unsubscribe()
       presenceSub.unsubscribe()
     }
-  }, [client, connected, user?.userId])
+  }, [client, connected, user?.userId, removeTyping])
+
+  useEffect(() => {
+    if (!client || !connected) return
+
+    const timers = typingTimers.current
+    const sub = client.subscribe('/user/queue/typing', (frame) => {
+      const t: { chatId: number; userId: number; username: string } = JSON.parse(frame.body)
+      const key = `${t.chatId}:${t.userId}`
+      setTyping((prev) => ({
+        ...prev,
+        [t.chatId]: { ...prev[t.chatId], [t.userId]: t.username },
+      }))
+      clearTimeout(timers[key])
+      timers[key] = setTimeout(() => removeTyping(t.chatId, t.userId), 3000)
+    })
+
+    return () => {
+      sub.unsubscribe()
+      Object.values(timers).forEach(clearTimeout)
+      Object.keys(timers).forEach((k) => delete timers[k])
+      setTyping({})
+    }
+  }, [client, connected, removeTyping])
 
   const sorted = [...chats].sort(
     (a, b) =>
@@ -114,7 +152,11 @@ export default function ChatList() {
           <p className="p-4 text-center text-gray-500">No chats yet. Start a new one.</p>
         )}
         {sorted.map((chat) => (
-          <ChatListItem key={chat.id} chat={chat} />
+          <ChatListItem
+            key={chat.id}
+            chat={chat}
+            typingText={formatTyping(Object.values(typing[chat.id] ?? {}), chat.type === 'GROUP')}
+          />
         ))}
       </div>
       {menuOpen && <div className="fixed inset-0" onClick={() => setMenuOpen(false)} />}
