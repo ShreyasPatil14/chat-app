@@ -4,7 +4,13 @@ import type { ChatSummary } from '../types/chat'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export default function ChatListItem({ chat }: { chat: ChatSummary }) {
+export default function ChatListItem({
+  chat,
+  typingText = '',
+}: {
+  chat: ChatSummary
+  typingText?: string
+}) {
   const showOnline = chat.type === 'DIRECT' && chat.online
   const { user } = useAuth()
 
@@ -32,8 +38,11 @@ export default function ChatListItem({ chat }: { chat: ChatSummary }) {
           </span>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <p className={`text-sm truncate ${unread ? 'font-semibold text-gray-900' : 'text-gray-500'}`}>
-            {preview}
+          <p
+            className={`text-sm truncate ${typingText ? 'text-green-600' : unread ? 'font-semibold text-gray-900' : 'text-gray-500'
+              }`}
+          >
+            {typingText || preview}
           </p>
           {unread && (
             <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-blue-600 text-white text-xs font-semibold flex items-center justify-center">
