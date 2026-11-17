@@ -12,6 +12,7 @@ import com.chatapp.chat_app.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.time.Instant;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -148,7 +149,7 @@ public class ChatService {
             String name;
             Long otherUserId = null;
             boolean online = false;
-            LocalDateTime lastSeen = null;
+            Instant lastSeen = null;
 
             if (chat.getType() == ChatType.GROUP) {
                 name = chat.getName();
@@ -174,7 +175,7 @@ public class ChatService {
             Optional<Message> last = messageRepository
                     .findFirstByChatIdAndIdGreaterThanOrderByIdDesc(chat.getId(), cleared);
             String lastMessage = last.map(Message::getContent).orElse(null);
-            LocalDateTime lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
+            Instant lastMessageAt = last.map(Message::getCreatedAt).orElse(null);
             String lastMessageSender = last.map(m -> m.getSender().getUsername()).orElse(null);
 
             long lastRead = membership.getLastReadMessageId() != null ? membership.getLastReadMessageId() : 0L;

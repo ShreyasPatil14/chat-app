@@ -12,6 +12,7 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Component
@@ -44,11 +45,11 @@ public class PresenceEventListener {
         Long userId = Long.valueOf(principal.getName());
 
         if (presenceService.userDisconnected(userId, event.getSessionId())) {
-            broadcast(userId, false, LocalDateTime.now());
+            broadcast(userId, false, Instant.now());
         }
     }
 
-    private void broadcast(Long userId, boolean online, LocalDateTime lastSeen) {
+    private void broadcast(Long userId, boolean online, Instant lastSeen) {
         PresenceResponse presence = new PresenceResponse(userId, online, lastSeen);
         for (Long contactId : chatMemberRepository.findContactIds(userId)) {
             messagingTemplate.convertAndSendToUser(

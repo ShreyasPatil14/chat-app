@@ -4,7 +4,7 @@ import com.chatapp.chat_app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +43,7 @@ public class PresenceService {
 
         if (wentOffline[0]) {
             userRepository.findById(userId).ifPresent(user -> {
-                user.setLastSeen(LocalDateTime.now());
+                user.setLastSeen(Instant.now());
                 userRepository.save(user);
             });
         }

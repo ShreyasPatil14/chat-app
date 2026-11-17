@@ -5,8 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -18,9 +17,9 @@ public class ChatSummaryResponse {
     private String name;
     private Long otherUserId;
     private boolean online;
-    private LocalDateTime lastSeen;
+    private Instant lastSeen;
     private String lastMessage;
     private String lastMessageSender;
-    private LocalDateTime lastMessageAt;
+    private Instant lastMessageAt;
     private long unreadCount;
 }

@@ -1,8 +1,7 @@
 package com.chatapp.chat_app.dto;
 
 import lombok.*;
-
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -14,6 +13,6 @@ public class MessageResponse {
     private Long senderId;
     private String senderUsername;
     private String content;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
 }
