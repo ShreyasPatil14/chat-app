@@ -255,7 +255,7 @@ export default function ChatWindow() {
                     <div className="min-w-0">
                         <p className="font-medium truncate">{name}</p>
                         {(typingText || status) && (
-                            <p className={`text-xs truncate ${typingText ? 'text-green-600' : 'text-gray-500'}`}>
+                            <p className={'text-xs truncate text-gray-500'}>
                                 {typingText || status}
                             </p>
                         )}
