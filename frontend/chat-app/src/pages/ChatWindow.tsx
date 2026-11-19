@@ -79,6 +79,21 @@ export default function ChatWindow() {
             .finally(() => setLoading(false))
     }, [chatId])
 
+    useEffect(() => {
+        if (!connected) return
+
+        getMessages(Number(chatId))
+            .then((data) =>
+                setMessages((prev) => {
+                    const current = prev.filter((m) => m.chatId === Number(chatId))
+                    const known = new Set(current.map((m) => m.id))
+                    const fresh = data.filter((m) => !known.has(m.id))
+                    return fresh.length ? [...current, ...fresh].sort((a, b) => a.id - b.id) : current
+                }),
+            )
+            .catch(() => { })
+    }, [connected, chatId])
+
     const loadOlder = () => {
         if (loadingOlder || !hasMore || messages.length === 0) return
 
