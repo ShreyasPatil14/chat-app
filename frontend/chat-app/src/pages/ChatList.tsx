@@ -46,6 +46,11 @@ export default function ChatList() {
   }, [])
 
   useEffect(() => {
+    if (!connected) return
+    getMyChats().then(setChats).catch(() => { })
+  }, [connected])
+
+  useEffect(() => {
     if (!client || !connected) return
 
     const messageSub = client.subscribe('/user/queue/messages', (frame) => {
