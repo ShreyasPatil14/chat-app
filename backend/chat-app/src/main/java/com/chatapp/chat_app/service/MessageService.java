@@ -103,6 +103,8 @@ public class MessageService {
         message.setChat(chat.get());
         message.setSender(sender);
         message.setContent(request.getContent().trim());
+        String clientId = request.getClientId();
+        message.setClientId(clientId == null || clientId.isBlank() ? null : clientId.trim());
 
         Message response = messageRepository.save(message);
         List<ChatMember> toRestore = chatMemberRepository.findByChatId(chat.get().getId()).stream()
@@ -117,7 +119,8 @@ public class MessageService {
                 response.getSender().getId(),
                 response.getSender().getUsername(),
                 response.getContent(),
-                response.getCreatedAt()
+                response.getCreatedAt(),
+                response.getClientId()
         );
     }
 
