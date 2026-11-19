@@ -23,4 +23,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByChatIdAndIdGreaterThanOrderByIdDesc(Long chatId, Long after, Pageable pageable);
 
     List<Message> findByChatIdAndIdGreaterThanAndIdLessThanOrderByIdDesc(Long chatId, Long after, Long before, Pageable pageable);
+
+    Optional<Message> findBySenderIdAndClientId(Long senderId, String clientId);
 }
