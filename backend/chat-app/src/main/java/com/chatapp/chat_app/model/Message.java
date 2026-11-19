@@ -5,10 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.time.Instant;
 
 @Entity
-@Table(name = "messages", indexes = @Index(name = "idx_messages_chat_id_id", columnList = "chat_id, id"))
+@Table(
+        name = "messages",
+        indexes = @Index(name = "idx_messages_chat_id_id", columnList = "chat_id, id"),
+        uniqueConstraints = @UniqueConstraint(name = "uk_messages_sender_client", columnNames = {"sender_id", "client_id"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,11 +35,14 @@ public class Message {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "client_id", length = 64)
+    private String clientId;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
     @PrePersist
-    private void onCreate(){
+    private void onCreate() {
         this.createdAt = Instant.now();
     }
 }
