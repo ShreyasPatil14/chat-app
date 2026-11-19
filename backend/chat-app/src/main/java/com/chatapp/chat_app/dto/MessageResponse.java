@@ -14,5 +14,10 @@ public class MessageResponse {
     private String senderUsername;
     private String content;
     private Instant createdAt;
+    private String clientId;
 
+    public MessageResponse(Long id, Long chatId, Long senderId, String senderUsername,
+                           String content, Instant createdAt) {
+        this(id, chatId, senderId, senderUsername, content, createdAt, null);
+    }
 }
