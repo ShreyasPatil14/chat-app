@@ -3,7 +3,7 @@ import Avatar from '../components/Avatar'
 import { getErrorMessage } from '../api/auth'
 import { useAuth } from '../hooks/useAuth'
 import type { ChatSummary, PresenceUpdate } from '../types/chat'
-import type { Message } from '../types/message'
+import type { Message, PendingMessage } from '../types/message'
 import { useSocket } from '../hooks/useSocket'
 import { deleteChat, getMembers, getMyChats } from '../api/chats'
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react'
@@ -38,6 +38,8 @@ export default function ChatWindow() {
     const [typingUsers, setTypingUsers] = useState<Record<number, string>>({})
     const typingTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
     const lastTypingSent = useRef(0)
+    const [pending, setPending] = useState<PendingMessage[]>([])
+    const sendTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
     const removeTyping = useCallback((userId: number) => {
         clearTimeout(typingTimers.current[userId])
@@ -48,6 +50,41 @@ export default function ChatWindow() {
             delete next[userId]
             return next
         })
+    }, [])
+
+    const markFailed = useCallback((clientId: string) => {
+        clearTimeout(sendTimers.current[clientId])
+        delete sendTimers.current[clientId]
+        setPending((prev) =>
+            prev.map((p) => (p.clientId === clientId ? { ...p, status: 'failed' } : p)),
+        )
+    }, [])
+
+    const settlePending = useCallback((clientId: string) => {
+        clearTimeout(sendTimers.current[clientId])
+        delete sendTimers.current[clientId]
+        setPending((prev) => prev.filter((p) => p.clientId !== clientId))
+    }, [])
+
+    const publishMessage = useCallback(
+        (clientId: string, content: string) => {
+            if (!client || !client.connected) {
+                markFailed(clientId)
+                return
+            }
+            client.publish({
+                destination: '/app/chat.send',
+                body: JSON.stringify({ chatId: Number(chatId), content, clientId }),
+            })
+            clearTimeout(sendTimers.current[clientId])
+            sendTimers.current[clientId] = setTimeout(() => markFailed(clientId), 10000)
+        },
+        [client, chatId, markFailed],
+    )
+
+    useEffect(() => {
+        const timers = sendTimers.current
+        return () => Object.values(timers).forEach(clearTimeout)
     }, [])
 
     useEffect(() => {
@@ -112,6 +149,9 @@ export default function ChatWindow() {
             .finally(() => setLoadingOlder(false))
     }
 
+    const visiblePending = pending.filter((p) => p.chatId === Number(chatId))
+
+
     useLayoutEffect(() => {
         const list = listRef.current
         if (!list) return
@@ -122,7 +162,7 @@ export default function ChatWindow() {
         } else {
             bottomRef.current?.scrollIntoView()
         }
-    }, [messages])
+    }, [messages, visiblePending.length])
 
     useEffect(() => {
         if (!client || !connected) return
@@ -131,11 +171,12 @@ export default function ChatWindow() {
             const msg: Message = JSON.parse(frame.body)
             if (msg.chatId !== Number(chatId)) return
             removeTyping(msg.senderId)
+            if (msg.clientId) settlePending(msg.clientId)
             setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
         })
 
         return () => sub.unsubscribe()
-    }, [client, connected, chatId, removeTyping])
+    }, [client, connected, chatId, removeTyping, settlePending])
 
     useEffect(() => {
         if (!client || !connected || !otherUserId) return
@@ -207,14 +248,25 @@ export default function ChatWindow() {
     const handleSend = (e: SyntheticEvent) => {
         e.preventDefault()
         const content = text.trim()
-        if (!content || !client || !connected) return
+        if (!content) return
 
-        client.publish({
-            destination: '/app/chat.send',
-            body: JSON.stringify({ chatId: Number(chatId), content }),
-        })
+        const clientId = crypto.randomUUID()
+        setPending((prev) => [
+            ...prev,
+            { clientId, chatId: Number(chatId), content, createdAt: new Date().toISOString(), status: 'sending' },
+        ])
+        publishMessage(clientId, content)
         setText('')
     }
+
+    const handleRetry = (p: PendingMessage) => {
+        setPending((prev) =>
+            prev.map((x) => (x.clientId === p.clientId ? { ...x, status: 'sending' } : x)),
+        )
+        publishMessage(p.clientId, p.content)
+    }
+
+    const discardPending = (clientId: string) => settlePending(clientId)
 
     const handleDelete = async () => {
         setMenuOpen(false)
@@ -254,6 +306,7 @@ export default function ChatWindow() {
             typingText = `${typingNames[0]}, ${typingNames[1]} and ${others} other${others > 1 ? 's' : ''} are typing...`
         }
     }
+
 
     return (
         <div className="h-screen flex flex-col">
@@ -311,7 +364,7 @@ export default function ChatWindow() {
             >
                 {loading && <p className="text-center text-gray-500">Loading...</p>}
                 {error && <p className="text-center text-red-600">{error}</p>}
-                {!loading && !error && messages.length === 0 && (
+                {!loading && !error && messages.length === 0 && visiblePending.length === 0 &&(
                     <p className="text-center text-gray-500">No messages yet. Say hi.</p>
                 )}
 
@@ -344,6 +397,33 @@ export default function ChatWindow() {
                         </Fragment>
                     )
                 })}
+                {visiblePending.map((p) => (
+                    <div key={p.clientId} className="flex justify-end">
+                        <div className="max-w-[75%]">
+                            <div
+                                className={`rounded-lg px-3 py-2 ${p.status === 'failed'
+                                    ? 'bg-red-50 text-red-900 ring-1 ring-red-300'
+                                    : 'bg-blue-600 text-white opacity-70'
+                                    }`}
+                            >
+                                <p className="whitespace-pre-wrap break-words">{p.content}</p>
+                                <p className={`mt-1 text-right text-[10px] ${p.status === 'failed' ? 'text-red-500' : 'text-blue-100'}`}>
+                                    {p.status === 'failed' ? 'Not sent' : 'Sending...'}
+                                </p>
+                            </div>
+                            {p.status === 'failed' && (
+                                <div className="mt-1 flex justify-end gap-3 text-xs">
+                                    <button type="button" onClick={() => handleRetry(p)} className="font-medium text-blue-600 cursor-pointer">
+                                        Retry
+                                    </button>
+                                    <button type="button" onClick={() => discardPending(p.clientId)} className="text-gray-500 cursor-pointer">
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
                 <div ref={bottomRef} />
             </div>
             <form onSubmit={handleSend} className="flex items-end gap-2 border-t p-3">
@@ -363,7 +443,7 @@ export default function ChatWindow() {
                 />
                 <button
                     type="submit"
-                    disabled={!text.trim() || !connected}
+                    disabled={!text.trim()}
                     className="bg-blue-600 text-white rounded-lg px-4 py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
                 >
                     Send
