@@ -24,6 +24,7 @@ import com.chatapp.chat_app.dto.TypingResponse;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 
 
 @Controller
@@ -45,7 +46,16 @@ public class ChatSocketController {
 
     @MessageMapping("/chat.send")
     public void sendMessage(@Payload @Valid SendMessageRequest request, Principal principal) {
-        MessageResponse response = messageService.saveMessage(getUser(principal), request);
+        User sender = getUser(principal);
+
+        Optional<MessageResponse> existing = messageService.findByClientId(sender, request.getClientId());
+        if (existing.isPresent()) {
+            messagingTemplate.convertAndSendToUser(
+                    sender.getId().toString(), "/queue/messages", existing.get());
+            return;
+        }
+
+        MessageResponse response = messageService.saveMessage(sender, request);
 
         List<ChatMember> members = chatMemberRepository.findByChatId(request.getChatId());
 
