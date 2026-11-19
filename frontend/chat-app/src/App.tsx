@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import { useAuth } from './hooks/useAuth'
@@ -10,7 +10,7 @@ import NewGroup from './pages/NewGroup'
 import GroupInfo from './pages/GroupInfo'
 import AddMember from './pages/AddMember'
 import { usePushNotifications } from './hooks/usePushNotifications'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import SplashScreen from './components/SplashScreen'
 import { useMessageAlerts } from './hooks/useMessageAlerts'
 import MessageAlert from './components/MessageAlert'
@@ -28,6 +28,18 @@ export default function App() {
   useDeliveryReceipts()
   usePushNotifications()
   const { alert, dismiss } = useMessageAlerts()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'OPEN_CHAT' && typeof e.data.url === 'string') {
+        navigate(e.data.url)
+      }
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [navigate])
 
   const [showSplash, setShowSplash] = useState(() => !splashAlreadyShown())
 

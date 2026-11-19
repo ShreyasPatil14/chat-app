@@ -19,7 +19,7 @@ self.addEventListener("notificationclick", (event) => {
 
       if (existing) {
         await existing.focus();
-        if ("navigate" in existing) await existing.navigate(url);
+        existing.postMessage({ type: "OPEN_CHAT", url });
       } else {
         await self.clients.openWindow(url);
       }
@@ -48,20 +48,20 @@ firebase.initializeApp({
 
 firebase.messaging();
 
-const messaging = firebase.messaging()
+const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   // Old-style push: Firebase already draws it, so we must not draw a second one.
-  if (payload.notification) return
+  if (payload.notification) return;
 
-  const { title, body, chatId, messageId } = payload.data || {}
+  const { title, body, chatId, messageId } = payload.data || {};
 
-  return self.registration.showNotification(title || 'ChatApp', {
-    body: body || '',
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-64x64.png',
+  return self.registration.showNotification(title || "ChatApp", {
+    body: body || "",
+    icon: "/pwa-192x192.png",
+    badge: "/pwa-64x64.png",
     tag: `chat-${chatId}`,
     renotify: true,
     data: { chatId, messageId },
-  })
-})
+  });
+});
