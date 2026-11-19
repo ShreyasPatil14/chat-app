@@ -124,6 +124,20 @@ public class MessageService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Optional<MessageResponse> findByClientId(User sender, String clientId) {
+        if (clientId == null || clientId.isBlank()) return Optional.empty();
+        return messageRepository.findBySenderIdAndClientId(sender.getId(), clientId.trim())
+                .map(m -> new MessageResponse(
+                        m.getId(),
+                        m.getChat().getId(),
+                        m.getSender().getId(),
+                        m.getSender().getUsername(),
+                        m.getContent(),
+                        m.getCreatedAt(),
+                        m.getClientId()));
+    }
+
     // mark message delivered:
     @Transactional
     public void markDelivered(User user, ReceiptRequest request) {
